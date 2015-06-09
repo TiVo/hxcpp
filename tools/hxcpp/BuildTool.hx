@@ -173,11 +173,19 @@ class BuildTool
          {
             useCache = true;
          }
+#if tivo
+         else
+         {
+            PathManager.mkdir(compileCache);
+            useCache = true;
+         }
+#else
          else
          {
             Log.error("Could not find compiler cache \"" + compileCache + "\"");
             //throw "Could not find compiler cache: " + compileCache;
          }
+#end
       }
 
       if (useCache && (!mDefines.exists("haxe_ver") && !mDefines.exists("HXCPP_DEPENDS_OK")))
