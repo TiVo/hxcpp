@@ -197,7 +197,7 @@ class Compiler
          else
          {
             command = mGetCompilerVersion;
-            versionString = ProcessManager.readStderr(mGetCompilerVersion,[]).join(" ");
+            versionString = ProcessManager.readStdout(mGetCompilerVersion,[]).join(" ");
          }
 
          if (versionString=="" || versionString==null)

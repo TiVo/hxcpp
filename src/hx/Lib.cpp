@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 #include <string>
-#include <map>
+#include <tr1/unordered_map>
 #include <vector>
 #include <stdlib.h>
 
@@ -89,9 +89,9 @@ void hxFreeLibrary(Module inModule) { dlclose(inModule); }
 #endif
 
 #ifdef HX_UTF8_STRINGS
-typedef std::map<std::string,Module> LoadedModule;
+typedef std::tr1::unordered_map<std::string,Module> LoadedModule;
 #else
-typedef std::map<std::wstring,Module> LoadedModule;
+typedef std::tr1::unordered_map<std::wstring,Module> LoadedModule;
 #endif
 
 static LoadedModule sgLoadedModule;
@@ -295,34 +295,46 @@ String FindHaxelib(String inLib)
        if (loadDebug) printf("HAXEPATH default:%s\n", haxepath.__s);
    }
 
-   String dir = haxepath + HX_CSTRING("/") + inLib + HX_CSTRING("/");
-
-
-   String dev = dir + HX_CSTRING(".dev");
-   String path = GetFileContents(dev);
-   if (loadDebug) printf("Read dev location from file :%s, got %s\n", dev.__s, path.__s);
-   if (path.length==0)
-   {
-      path = GetFileContents(dir + HX_CSTRING(".current"));
+   String path;
+   char *haxepath_c = strdup(haxepath.c_str());
+   char *hp = strtok(haxepath_c, ":");
+   while (hp) {
+      String dir = haxepath + HX_CSTRING("/") + inLib + HX_CSTRING("/");
+   
+   
+      String dev = dir + HX_CSTRING(".dev");
+      String path = GetFileContents(dev);
+      if (loadDebug) printf("Read dev location from file :%s, got %s\n", dev.__s, path.__s);
       if (path.length==0)
-         return null();
-      // Replace "." with "," ...
-      String with_commas;
-      for(int i=0;i<path.length;i++)
-         if (path.getChar(i)=='.')
-            with_commas += HX_CSTRING(",");
-         else
-            with_commas += path.substr(i,1);
+      {
+         path = GetFileContents(dir + HX_CSTRING(".current"));
+         if (path.length==0)
+            return null();
+         // Replace "." with "," ...
+         String with_commas;
+         for(int i=0;i<path.length;i++)
+            if (path.getChar(i)=='.')
+               with_commas += HX_CSTRING(",");
+            else
+               with_commas += path.substr(i,1);
+   
+         path = dir + with_commas + HX_CSTRING("/");
+      }
+      if (path.length) {
+         break;
+      }
 
-      path = dir + with_commas + HX_CSTRING("/");
+      hp = strtok(NULL, ":");
    }
+      
+   free(haxepath_c);
 
    return path;
 }
 
 #endif
 
-typedef std::map<std::string,void *> RegistrationMap;
+typedef std::tr1::unordered_map<std::string,void *> RegistrationMap;
 RegistrationMap *sgRegisteredPrims=0;
 
 
@@ -594,6 +606,19 @@ void *__hxcpp_get_proc_address(String inLib, String full_name,bool inNdllProc,bo
          }
       }
       #endif
+
+      if (!module) {
+          // Yet another fallback location ...
+          String install_dir = GetEnv("HAXELIB_INSTALL");
+          if (install_dir.length == 0) {
+              install_dir = String("/usr/lib/haxe");
+          }
+          
+          if (gLoadDebug)
+              printf(" try %s...\n", install_dir.__CStr());
+          
+          module = hxLoadLibrary(install_dir + HX_CSTRING("/") + inLib + extension);
+      }
    }
 
    if (!module)

@@ -32,7 +32,8 @@
   <flag value="-Wno-bool-conversion" if="HXCPP_CLANG"/>
   <flag value="-fobjc-arc" if="OBJC_ARC" />
   <include name="toolchain/common-defines.xml" />
-  <objdir value="obj/darwin${OBJEXT}/" />
+  <objdir value="${OBJDIR}" if="OBJDIR" />
+  <objdir value="obj/darwin${OBJEXT}/" unless="OBJDIR" />
   <outflag value="-o"/>
   <ext value=".o"/>
   <getversion value="xcrun --sdk macosx${MACOSX_VER} clang++ -v" if="HXCPP_CLANG" />

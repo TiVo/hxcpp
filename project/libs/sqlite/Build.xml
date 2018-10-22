@@ -23,7 +23,7 @@
 <target id="sqlite" output="${HX_TARGET_PREFIX}sqlite${LIB_DBG}${HX_TARGET_SUFFIX}" tool="linker" toolid="${STD_MODULE_LINK}">
   <files id="sqlite"/>
   <lib name="-lpthread" if="linux" unless="static_link" />
-  <outdir name="../../../${DESTDIR}/${BINDIR}"/>
+  <outdir name="${PREBINDIR}/${BINDIR}"/>
 </target>
 
 

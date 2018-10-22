@@ -27,7 +27,7 @@ extern "C" EXPORT_EXTRA void AppLogInternal(const char* pFunction, int lineNumbe
 #endif
 #include <string>
 #include <vector>
-#include <map>
+#include <tr1/unordered_map>
 #include <time.h>
 
 
@@ -257,12 +257,20 @@ double  __time_stamp()
 
    return (double)clock() / ( (double)CLOCKS_PER_SEC);
 #else
+#ifdef HX_LINUX
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    double t = (ts.tv_sec + (((double) ts.tv_nsec ) * 1e-9));
+    if (t0==0) t0 = t;
+    return t-t0;
+#else
    struct timeval tv;
    if( gettimeofday(&tv,0) )
       throw Dynamic("Could not get time");
    double t =  ( tv.tv_sec + ((double)tv.tv_usec) / 1000000.0 );
    if (t0==0) t0 = t;
    return t-t0;
+#endif
 #endif
 }
 
@@ -494,7 +502,7 @@ Dynamic __hxcpp_create_var_args(Dynamic &inArrayFunc)
 
 
 
-typedef std::map<std::string,int> StringToField;
+typedef std::tr1::unordered_map<std::string,int> StringToField;
 
 // These need to be pointers because of the unknown order of static object construction.
 String *sgFieldToString=0;

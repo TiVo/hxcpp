@@ -1,0 +1,2 @@
+
+typedef Dependencies = Array<FilenameAndChecksum>;

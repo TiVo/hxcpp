@@ -1,4 +1,4 @@
-   #include <hxcpp.h>
+#include <hxcpp.h>
 #include <stdio.h>
 // Get headers etc.
 #include <hx/OS.h>
@@ -6,7 +6,7 @@
 #define IGNORE_CFFI_API_H
 
 #include <hx/CFFI.h>
-#include <map>
+#include <tr1/unordered_map>
 #include <string>
 
 
@@ -111,8 +111,8 @@ vkind k_cpp_struct = (vkind)(vtAbstractBase + 3);
 vkind k_cpp_objc = (vkind)(vtAbstractBase + 4);
 static int sgKinds = (int)(vtAbstractBase + 5);
 
-typedef std::map<std::string,int> KindMap;
-typedef std::map<int,std::string> ReverseKindMap;
+typedef std::tr1::unordered_map<std::string,int> KindMap;
+typedef std::tr1::unordered_map<int,std::string> ReverseKindMap;
 static KindMap sgKindMap;
 static ReverseKindMap sgReverseKindMap;
 

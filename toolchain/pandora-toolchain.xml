@@ -1,0 +1,70 @@
+<xml>
+
+<!-- PANDORA TOOLS -------------------------------------------------->
+	
+<error value="Please define PANDORA_ROOT" unless="PANDORA_ROOT"/>
+
+<set name="PANDORA_TOOL" value="${PANDORA_ROOT}/"/>
+
+<include name="gcc-toolchain.xml"/>
+
+<path name="${PANDORA_TOOL}/bin/"/>
+<path name="${PANDORA_TOOL}/arm-none-linux-gnueabi/bin/"/>
+<setenv name="CYGWIN" value="nodosfilewarning"/>
+<set name="PANDORA_SYS" value="${PANDORA_TOOL}/arm-none-linux-gnueabi/"/>
+
+<compiler id="PANDORA" exe="arm-none-linux-gnueabi-g++">
+	<flag value="-c"/>
+	<flag value="-g" if="debug"/>
+	<flag value="-Os" unless="debug"/>
+	<flag value="-I${HXCPP}/include"/>
+	<flag value="--sysroot=${PANDORA_SYS}"/>
+	<flag value="-I${PANDORA_TOOL}/include"/>
+  <flag value="-I${PANDORA_TOOL}/usr/include"/>
+	<flag value="-I${PANDORA_SYS}/usr/include/freetype3"/>
+	<flag value="-I${PANDORA_SYS}/usr/include/SDL"/>
+	<flag value="-DPANDORA"/>
+  <include name="common-defines.xml" />
+	<flag value="-fvisibility=hidden"/>
+	<flag value="-fdollars-in-identifiers"/>
+	<flag value="-fno-common"/>
+	<flag value="-march=armv5te"/>
+	<flag value="-mtune=arm9tdmi"/>
+	<flag value="-mapcs"/>
+	<flag value="-msoft-float"/>
+	<flag value="-mfloat-abi=soft"/>
+	<cppflag value="-frtti"/>
+	<flag value="-fpic"/>
+	<flag value="-fPIC"/>
+	<outflag value="-o"/>
+	<objdir value="./obj/pandora/Debug" if="debug"/>
+	<objdir value="./obj/pandora/Release" unless="debug"/>
+</compiler>
+
+<linker id="exe" exe="arm-none-linux-gnueabi-g++">
+	<ext value=""/>
+  <flag value="--sysroot=${PANDORA_SYS}/libc"/>
+	<flag value="-mfloat-abi=soft"/>
+	<outflag value="-o"/>
+	<lib name="-ldl"/>
+	<lib name="-lc"/>
+	<lib name="-lpthread"/>
+	<lib name="-lm"/>
+</linker>
+
+<linker id="dll" exe="arm-none-linux-gnueabi-g++">
+	<flag value="-Wl,--no-undefined"/>
+  <flag value="--sysroot=${PANDORA_SYS}/libc"/>
+	<flag value="-msoft-float"/>
+	<flag value="-fpic"/>
+	<flag value="-fPIC"/>
+	<flag value="-shared"/>
+	<ext value=".so"/>
+	<outflag value="-o"/>
+	<lib name="-ldl"/>
+	<lib name="-lc"/>
+	<lib name="-lpthread"/>
+	<lib name="-lm"/>
+</linker>
+
+</xml>

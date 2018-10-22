@@ -126,6 +126,11 @@ struct Deque : public Array_obj<Dynamic>
 		while(inBlock && !length)
 			mSemaphore.QWait();
 		hx::ExitGCFreeZone();
+        // The shift will take 1 from the Deque.  If more threads are waiting,
+        // another needs to be woken up also to get the next one.
+        if (length > 1) {
+            mSemaphore.QSet();
+        }
 		return shift();
 	}
 	#endif

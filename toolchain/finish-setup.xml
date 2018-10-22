@@ -74,6 +74,10 @@
 <set name="NDLLDIR" value="ndll" />
 <set name="NDLLDIR" value="lib" if="static_link" />
 
+<!-- Prepend the HAXELIB_STAGED_DIR (and a slash) if it is set... -->
+<set name="PREBINDIR" value="${HAXELIB_STAGED_DIR}/${DESTDIR}/" if="tivo"/>
+<!-- ...otherwise use '../bin' -->
+<set name="PREBINDIR" value="../${DESTDIR}/" unless="tivo"/>
 
 <set name="IPHONE_VER" value="4.2" unless="IPHONE_VER" />
 

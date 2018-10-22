@@ -227,12 +227,14 @@ namespace hx
 {
 class MarkContext;
 
+#ifdef HXCPP_VISIT_ALLOCS
 class VisitContext
 {
 public:
    virtual void visitObject(hx::Object **ioPtr)=0;
    virtual void visitAlloc(void **ioPtr)=0;
 };
+#endif
 
 
 #if (HXCPP_API_LEVEL >= 313)

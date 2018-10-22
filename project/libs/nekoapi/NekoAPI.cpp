@@ -597,6 +597,15 @@ void api_gc_set_top_of_stack(int *,bool)
 {
 }
 
+void api_gc_collect()
+{
+    // TODO
+}
+
+void api_gc_compact()
+{
+    // TODO
+}
 
 
 value *api_alloc_root()
