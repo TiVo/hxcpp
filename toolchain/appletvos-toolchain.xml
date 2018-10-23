@@ -37,6 +37,7 @@
   <flag value="-mappletvos-version-min=9.0" unless="HXCPP_GCC" />
   <flag value="-fobjc-arc" if="OBJC_ARC" />
   <flag value="-DOBJC_ARC" if="OBJC_ARC" />
+  <flag value="-DUSE_STD_MAP=USE_STD_MAP"/>
   <flag value="-Wno-parentheses" />
   <flag value="-Wno-null-dereference" unless="HXCPP_GCC"/>
   <flag value="-Wno-unused-value" />

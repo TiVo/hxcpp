@@ -60,6 +60,13 @@ void __hxcpp_set_stack_frame_line(int);
 HXCPP_EXTERN_CLASS_ATTRIBUTES
 void __hxcpp_on_line_changed();
 
+// If the TiVo special symbol TIVOCONFIG_COLLECT_FUNCTION_CALLS is defined,
+// then turn HX_STACK_FRAME into something that records function calls
+#ifdef TIVOCONFIG_COLLECT_FUNCTION_CALLS
+void __hxcpp_function_called(const char *className, const char *functionName);
+void __hxcpp_function_called_dump();
+#endif
+
 HXCPP_EXTERN_CLASS_ATTRIBUTES
 void __hxcpp_set_debugger_info(const char **inAllClasses, const char **inFullPaths);
 
@@ -96,6 +103,9 @@ enum StepType
 class StackArgument;
 class StackVariable;
 class StackCatchable;
+
+// Handle an error that cannot be recovered from
+void __hxcpp_handle_critical_error(const char *msg);
 
 void __hxcpp_register_stack_frame(class StackFrame *inFrame);
 
@@ -434,6 +444,17 @@ extern volatile bool gShouldCallHandleBreakpoints;
 #endif
 
 #endif // HXCPP_STACK_TRACE
+
+
+// If the TiVo special symbol TIVOCONFIG_COLLECT_FUNCTION_CALLS is defined,
+// then turn HX_STACK_FRAME into something that records function calls
+#ifdef TIVOCONFIG_COLLECT_FUNCTION_CALLS
+#undef HX_STACK_FRAME
+#define HX_STACK_FRAME(className, functionName, classFunctionHash, \
+                       fullName, fileName, lineNumber, fileHash) \
+    __hxcpp_function_called(className, functionName);
+#endif
+
 
 } // namespace hx
 

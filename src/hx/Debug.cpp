@@ -2303,6 +2303,83 @@ void __hxcpp_on_line_changed()
    #endif
 }
 
+// If the TiVo special symbol TIVOCONFIG_COLLECT_FUNCTION_CALLS is defined,
+// then turn HX_STACK_FRAME into something that records function calls
+#ifdef TIVOCONFIG_COLLECT_FUNCTION_CALLS
+
+#include <map>
+
+static pthread_mutex_t g_functionCalledMutex = PTHREAD_MUTEX_INITIALIZER;
+static std::map<std::string, long> g_functionCalledMap;
+
+void __hxcpp_function_called(const char *className, const char *functionName)
+{
+    pthread_mutex_lock(&g_functionCalledMutex);
+
+    std::string full = std::string(className) + "." + functionName;
+
+    g_functionCalledMap[full] += 1;
+    
+    pthread_mutex_unlock(&g_functionCalledMutex);
+}
+
+#include <sys/stat.h>
+
+static void *__hxcpp_function_called_dump_thread_main(void *)
+{
+    fprintf(stderr, "Haxe function call count dump thread running and "
+            "watching for /tmp/dump_haxe_functions\n");
+    
+    while (true) {
+        struct stat statbuf;
+        if (stat("/tmp/dump_haxe_functions", &statbuf) != 0) {
+            sleep(1);
+            continue;
+        }
+
+        unlink("/tmp/dump_haxe_functions");
+        
+        FILE *fout = fopen("/tmp/haxe_functions_called", "w");
+        if (fout == NULL) {
+            fprintf(stderr, "Failed to open haxe functions called output file "
+                    "/tmp/haxe_functions_called\n");
+            continue;
+        }
+        
+        fprintf(stderr, "Dumping haxe functions called to "
+                "/tmp/haxe_functions_called\n");
+        pthread_mutex_lock(&g_functionCalledMutex);
+        std::map<std::string, long>::iterator it = g_functionCalledMap.begin();
+        while (it != g_functionCalledMap.end()) {
+            fprintf(fout, "%s: %ld\n", it->first.c_str(), it->second);
+            it++;
+        }
+        pthread_mutex_unlock(&g_functionCalledMutex);
+
+        fprintf(fout, "END\n");
+        
+        fclose(fout);
+        fprintf(stderr, "Finished dumping haxe functions called to "
+                "/tmp/haxe_functions_called\n");
+    }
+}
+
+
+// Static thread that just watches for /tmp/dump_haxe_functions to exist and
+// when it does, dumps functions
+static pthread_t g_functionCalledDumperThread;
+static int g_functionCalledDumperInit = pthread_create
+    (&g_functionCalledDumperThread, NULL,
+     &__hxcpp_function_called_dump_thread_main, NULL);
+
+
+#endif
+
+
+void hx::__hxcpp_handle_critical_error(const char *msg)
+{
+    hx::CriticalErrorHandler(String(msg), false);
+}
 
 
 void hx::__hxcpp_register_stack_frame(hx::StackFrame *inFrame)

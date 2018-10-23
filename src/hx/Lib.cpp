@@ -79,6 +79,7 @@ Module hxLoadLibrary(String inLib)
    #endif
    
    Module result = dlopen(inLib.__CStr(), flags);
+
    if (gLoadDebug)
    {
       if (result)
@@ -321,6 +322,12 @@ String GetFileContents(String inFile)
    if (bytes<1)
       return null();
    buf[bytes]='\0';
+   while ((bytes > 0) &&
+          ((buf[bytes - 1] == '\n') ||
+           (buf[bytes - 1] == '\r'))) {
+       bytes -= 1;
+       buf[bytes] = '\0';
+   }
    return String(buf,strlen(buf)).dup();
 }
 
@@ -401,26 +408,27 @@ String FindHaxelib(String inLib)
    char *haxepath_c = strdup(haxepath.c_str());
    char *hp = strtok(haxepath_c, ":");
    while (hp) {
-      String dir = haxepath + HX_CSTRING("/") + inLib + HX_CSTRING("/");
-   
-   
+      String dir = hp + HX_CSTRING("/") + inLib + HX_CSTRING("/");
+
       String dev = dir + HX_CSTRING(".dev");
-      String path = GetFileContents(dev);
+      path = GetFileContents(dev);
+
       if (loadDebug) printf("Read dev location from file :%s, got %s\n", dev.__s, path.__s);
+
       if (path.length==0)
       {
          path = GetFileContents(dir + HX_CSTRING(".current"));
-         if (path.length==0)
-            return null();
-         // Replace "." with "," ...
-         String with_commas;
-         for(int i=0;i<path.length;i++)
-            if (path.getChar(i)=='.')
-               with_commas += HX_CSTRING(",");
-            else
-               with_commas += path.substr(i,1);
-   
-         path = dir + with_commas + HX_CSTRING("/");
+         if (path.length > 0) {
+             // Replace "." with "," ...
+             String with_commas;
+             for(int i=0;i<path.length;i++)
+                if (path.getChar(i)=='.')
+                   with_commas += HX_CSTRING(",");
+                else
+                   with_commas += path.substr(i,1);
+       
+             path = dir + with_commas + HX_CSTRING("/");
+         }
       }
       if (path.length) {
          break;
@@ -428,7 +436,7 @@ String FindHaxelib(String inLib)
 
       hp = strtok(NULL, ":");
    }
-      
+
    free(haxepath_c);
 
    return path;
@@ -702,7 +710,11 @@ void *__hxcpp_get_proc_address(String inLib, String full_name,bool inNdllProc,bo
 
          if (haxelibPath.length!=0)
          {
-            String testPath  = haxelibPath + HX_CSTRING("/ndll/") + bin + HX_CSTRING("/") + inLib + extension;
+            String testPath = haxelibPath;
+            if (testPath[testPath.length - 1] != '/') {
+                testPath = testPath + "/";
+            }
+            testPath  = testPath + HX_CSTRING("ndll/") + bin + HX_CSTRING("/") + inLib + extension;
             if (gLoadDebug)
                printf(" try %s...\n", testPath.__s);
             module = hxLoadLibrary(testPath);

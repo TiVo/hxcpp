@@ -142,6 +142,8 @@ typedef struct LargeEntry
     Entry entry;
 } LargeEntry;
 
+typedef void (*HaxeFinalizer)(Dynamic);
+    
 
 // Recover an Entry from a pointer
 #define ENTRY_FROM_PTR(ptr)                                                  \
@@ -183,9 +185,11 @@ static bool GarbageCollectIfNecessaryLocked(int size);
 static void ClearWeakRefsLocked();
 
 // Sets the finalizer for an object to either f, if its set, or
-// internal_finalizer, of it's set, or to nothing if neither is set
+// internal_finalizer, if it's set, or haxe_finalizer if its set,
+// or to nothing if none are set
 static void SetFinalizerLocked(hx::Object *obj, hx::finalizer f,
-                               hx::InternalFinalizer *internal_finalizer);
+                               hx::InternalFinalizer *internal_finalizer,
+                               HaxeFinalizer haxe_finalizer);
 
 // Helper function to run a finalizer for a given object.  It is assumed that
 // there is a finalizer for the pointer.
@@ -319,10 +323,21 @@ static void clear_backtrace(void *ptr)
 
 
 // Finalizer bookkeeping
+typedef enum FinalizerType
+{
+    FinalizerTypeFinalizer,
+    FinalizerTypeInternalFinalizer,
+    FinalizerTypeHaxeFinalizer
+} FinalizerType;
+
 typedef struct FinalizerData
 {
-    hx::finalizer f;
-    hx::InternalFinalizer *internal_finalizer;
+    FinalizerType type;
+    union {
+        hx::finalizer f;
+        hx::InternalFinalizer *internal_finalizer;
+        HaxeFinalizer haxe_finalizer;
+    };
 } FinalizerData;
 
 
@@ -591,12 +606,10 @@ public:
             uintptr_t first = (uintptr_t) block->entries;
             uintptr_t last = (uintptr_t) &(block->entries[entriesPerBlockC]);
             if ((e >= first) && (e < last)) {
-                // It points within the block, now return whether or not it
-                // is an allocated entry - i.e. if it's both aligned properly
-                // to be an Entry, and the Entry is allocated.
-                return (((((uintptr_t) (e - first)) %
-                          sizeof(SizedEntry)) == 0) &&
-                        (FLAGS_OF_ENTRY(entry) & LAST_MARK_MASK));
+                // It points within the block, now return whether or not it is
+                // a valid entry - i.e. if it's aligned properly to be an
+                // Entry.
+                return ((((uintptr_t) (e - first)) % sizeof(SizedEntry)) == 0);
             }
             block = block->next;
         } while (block != blocksM);
@@ -991,16 +1004,27 @@ static bool GarbageCollectIfNecessaryLocked(int size)
 
 
 static void SetFinalizerLocked(hx::Object *obj, hx::finalizer f,
-                               hx::InternalFinalizer *internal_finalizer)
+                               hx::InternalFinalizer *internal_finalizer,
+                               HaxeFinalizer haxe_finalizer)
 {
-    if (f || internal_finalizer) {
+    if (f || internal_finalizer || haxe_finalizer) {
         // If there was a pre-existing finalizer, clean it up
         if (g_finalizers.count(obj) > 0) {
             delete g_finalizers[obj].internal_finalizer;
         }
         FinalizerData &fd = g_finalizers[obj];
-        fd.f = f;
-        fd.internal_finalizer = internal_finalizer;
+        if (f) {
+            fd.type = FinalizerTypeFinalizer;
+            fd.f = f;
+        }
+        else if (internal_finalizer) {
+            fd.type = FinalizerTypeInternalFinalizer;
+            fd.internal_finalizer = internal_finalizer;
+        }
+        else {
+            fd.type = FinalizerTypeHaxeFinalizer;
+            fd.haxe_finalizer = haxe_finalizer;
+        }
         FLAGS_OF_ENTRY(ENTRY_FROM_PTR(obj)) |= HAS_FINALIZER_FLAG;
     }
     else {
@@ -1024,12 +1048,19 @@ static void RunFinalizerLocked(hx::Object *obj)
 
     // Do not hold the global GC lock while calling the finalizer
     GCThreading_Unlock();
-    if (fd.internal_finalizer) {
-        (fd.internal_finalizer->mFinalizer)(obj);
-        delete fd.internal_finalizer;
-    }
-    else {
+    switch (fd.type) {
+    case FinalizerTypeFinalizer:
         (fd.f)(obj);
+        break;
+    case FinalizerTypeInternalFinalizer:
+        if (fd.internal_finalizer) {
+            (fd.internal_finalizer->mFinalizer)(obj);
+            delete fd.internal_finalizer;
+        }
+        break;
+    default:
+        (fd.haxe_finalizer)(obj);
+        break;
     }
     GCThreading_Lock();
 }
@@ -1172,17 +1203,22 @@ static void MarkPointers(void *start, void *end)
         if (((uintptr_t) ptr) <= sizeof(Entry)) {
             continue;
         }
-        // See if it was an allocated pointer
+        // See if it is a GC managed pointer
         Entry *entry = ENTRY_FROM_PTR(ptr);
         if (g_8b_allocator.Contains(entry) ||
             g_32b_allocator.Contains(entry) ||
             g_128b_allocator.Contains(entry) ||
             HasLargeEntry(ptr)) {
-            if (FLAGS_OF_ENTRY(entry) & IS_OBJECT_FLAG) {
-                hx::MarkObjectAlloc((hx::Object *) ptr, 0);
-            }
-            else {
-                hx::MarkAlloc(ptr, 0);
+            // It is GC managed; was it allocated?
+            uint32_t &flags = FLAGS_OF_ENTRY(entry);
+            if (flags & LAST_MARK_MASK) {
+                // Yes, so mark it
+                if (flags & IS_OBJECT_FLAG) {
+                    hx::MarkObjectAlloc((hx::Object *) ptr, 0);
+                }
+                else {
+                    hx::MarkAlloc(ptr, 0);
+                }
             }
         }
     }
@@ -1410,7 +1446,7 @@ void hx::GCRemoveRoot(hx::Object **inRoot)
 void hx::GCSetFinalizer(hx::Object *obj, hx::finalizer f)
 {
     GCThreading_Lock();
-    SetFinalizerLocked(obj, f, 0);
+    SetFinalizerLocked(obj, f, 0, 0);
     GCThreading_Unlock();
 }
 
@@ -1803,16 +1839,6 @@ void hx::MarkAlloc(void *ptr, hx::MarkContext *)
 {
     Entry *entry = ENTRY_FROM_PTR(ptr);
 
-#ifdef DEBUG
-    if (!(g_8b_allocator.Contains(entry) ||
-          g_32b_allocator.Contains(entry) ||
-          g_128b_allocator.Contains(entry) ||
-          HasLargeEntry(ptr))) {
-        fprintf(stderr, "*** Haxe GC detected bad MarkAlloc for %p\n", ptr);
-        pthread_kill(pthread_self(), SIGABRT);
-    }
-#endif
-
     FLAGS_OF_ENTRY(entry) =
         ((FLAGS_OF_ENTRY(entry) & ~LAST_MARK_MASK) | g_mark);
 }
@@ -1840,7 +1866,7 @@ hx::InternalFinalizer::InternalFinalizer(hx::Object *obj, finalizer inFinalizer)
     : mObject(obj), mFinalizer(inFinalizer)
 {
     GCThreading_Lock();
-    SetFinalizerLocked(obj, 0, this);
+    SetFinalizerLocked(obj, 0, this, 0);
     GCThreading_Unlock();
 }
 
@@ -1848,7 +1874,7 @@ hx::InternalFinalizer::InternalFinalizer(hx::Object *obj, finalizer inFinalizer)
 void hx::InternalFinalizer::Detach()
 {
     GCThreading_Lock();
-    SetFinalizerLocked(mObject, 0, 0);
+    SetFinalizerLocked(mObject, 0, 0, 0);
     GCThreading_Unlock();
 }
 
@@ -1882,6 +1908,15 @@ void hx::GCPrepareMultiThreaded()
 // its value.
 int hx::gPauseForCollect;
 
+
+extern "C"
+{
+void hxcpp_set_top_of_stack()
+{
+   int i = 0;
+   hx::SetTopOfStack(&i, false);
+}
+}
 
 void __hxcpp_enter_gc_free_zone()
 {
@@ -1917,6 +1952,12 @@ static int GetLargeAllocatedSizeLocked()
     return total;
 }
 
+void __hxcpp_set_finalizer(Dynamic inObject, void *inFinalizer)
+{
+    GCThreading_Lock();
+    SetFinalizerLocked(inObject.mPtr, 0, 0, (HaxeFinalizer) inFinalizer);
+    GCThreading_Unlock();
+}
 
 int __hxcpp_gc_mem_info(int inWhich)
 {

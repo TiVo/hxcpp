@@ -18,8 +18,19 @@ SUPPRESS_HAXELIB_JSON := 1
 # Built targets of hxcpp haxelib
 TARGETS += BuildBuildN BuildHxcppN BuildRunN BuildLibs
 
-ifeq ($(HAXE_TARGET_SYSTEM),android)
-TARGETS += BuildAndroid
+ifeq ($(HAXE_BUILD_TARGET),android)
+TARGETS += BuildNative
+PRE_BOM_TARGETS += BuildNative
+endif
+
+ifeq ($(HAXE_BUILD_TARGET),ios)
+TARGETS += BuildNative
+PRE_BOM_TARGETS += BuildNative
+endif
+
+ifeq ($(HAXE_BUILD_TARGET),tvos)
+TARGETS += BuildNative
+PRE_BOM_TARGETS += BuildNative
 endif
 
 LTDIRT += $(HAXELIB_STAGED_DIR)/build.n
@@ -30,18 +41,18 @@ LTDIRT += $(HAXELIB_STAGED_DIR)/run.n
 # the bom process will miss the libs
 PRE_BOM_TARGETS += BuildBuildN BuildHxcppN BuildRunN BuildLibs
 
-ifeq ($(HAXE_TARGET_SYSTEM),android)
-PRE_BOM_TARGETS += BuildAndroid
-endif
-
-ifneq ($(HAXE_TARGET_SYSTEM),html)
-ifneq ($(HAXE_TARGET_SYSTEM),java)
-ifneq ($(HAXE_TARGET_SYSTEM),android)
+ifneq ($(HAXE_BUILD_TARGET),html5)
+ifneq ($(HAXE_BUILD_TARGET),java)
+ifneq ($(HAXE_BUILD_TARGET),android)
+ifneq ($(HAXE_BUILD_TARGET),ios)
+ifneq ($(HAXE_BUILD_TARGET),tvos)
 
 # Special leaf bom targets that contribute bom fragments that can use
 # variables from this Makefile
 LEAF_BOM_FRAGMENTS = leaf.bom
 
+endif
+endif
 endif
 endif
 endif
@@ -94,11 +105,12 @@ BuildLibs: BuildBuildN BuildHxcppN BuildRunN
            $(HAXE_HOST_SYSTEM)-m$(HAXE_HOST_BITS) -DHXCPP_VERBOSE=1 \
            $(HXCPP_ARGS)
 
-# Manually build the native code for Android using the build.n created above
-.PHONY: BuildAndroid
-BuildAndroid: BuildBuildN BuildHxcppN BuildRunN
+# Manually build the native code using the build.n created above
+.PHONY: BuildNative
+BuildNative: BuildBuildN BuildHxcppN BuildRunN
 	@$(ECHO) -n "$(ISMCOLOR)$(ISM_NAME)$(UNCOLOR): "; \
-	$(ECHO) "$(COLOR)Rebuilding hxcpp libs for $(HAXE_HOST_SYSTEM)$(UNCOLOR)";
+	$(ECHO) "$(COLOR)Rebuilding hxcpp libs for $(HAXE_BUILD_TARGET)$(UNCOLOR)";
 	$(Q) cd $(HAXELIB_STAGED_DIR)/project; \
       HXCPP_CONFIG=$(ISM_TOPDIR)/lib/hxcpp_config.xml neko \
-           $(HAXELIB_STAGED_DIR)/build.n android -DHXCPP_VERBOSE=1 $(HXCPP_ARGS)
+           $(HAXELIB_STAGED_DIR)/build.n $(HAXE_BUILD_TARGET) \
+               -DHXCPP_VERBOSE=1 $(HXCPP_ARGS)

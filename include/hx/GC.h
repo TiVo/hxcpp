@@ -386,9 +386,16 @@ inline void MarkObjectAlloc(hx::Object *inPtr ,hx::MarkContext *__inCtx)
 #define HX_VISIT_ARRAY(ioPtr) { if (ioPtr) __inCtx->visitAlloc((void **)&ioPtr); }
 
 
-
-
-
+// compiler extensions for ensuring locality of methods
+#if defined(__GNUC__)
+#  if defined(__APPLE__) || defined(__MACH__)
+#    define HX_ATTRIBUTE_SECTION(s)     __attribute__((section("__TEXT," #s)))
+#  else
+#    define HX_ATTRIBUTE_SECTION(s)     __attribute__((section(#s)))
+#  endif
+#else
+#  define HX_ATTRIBUTE_SECTION(s)   
+#endif
 
 
 #endif

@@ -32,4 +32,6 @@
  <!-- set -D_TIVO_ for all TiVo builds, allows C++ code to include
       #ifdef _TIVO_ for TiVo-specific customizations -->
  <flag value="-D_TIVO_" if="tivo" />
+ <!-- special TiVo hack flag for counting function calls -->
+ <flag value="-DTIVOCONFIG_COLLECT_FUNCTION_CALLS" if="TIVOCONFIG_COLLECT_FUNCTION_CALLS" />
 </xml>
