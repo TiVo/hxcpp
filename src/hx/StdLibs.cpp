@@ -16,7 +16,7 @@ typedef int64_t __int64;
 #ifdef ANDROID
 #include <android/log.h>
 #endif
-#ifdef WEBOS
+#if (defined WEBOS || defined APPLETV || defined IPHONE)
 #include <syslog.h>
 #endif
 #ifdef TIZEN
@@ -219,6 +219,15 @@ void __trace(Dynamic inObj, Dynamic inData)
    __android_log_print(ANDROID_LOG_INFO, "trace","%s:%d: %s",
    #elif defined(WEBOS)
    syslog(LOG_INFO, "%s:%d: %s",
+   #elif defined(APPLETV)
+   syslog(LOG_ERR, "%s:%d: %s",
+   #elif defined(IPHONE)
+    syslog(LOG_ERR, "%s:%d: %s",
+           inData==null() ? "?" : inData->__Field( HX_CSTRING("fileName") , HX_PROP_DYNAMIC) ->toString().__s,
+           inData==null() ? 0 : inData->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC)->__ToInt(),
+           inObj.GetPtr() ? inObj->toString().__s : "null" );
+          
+    printf("%s:%d: %s\n",
    #else
    printf("%s:%d: %s\n",
    #endif

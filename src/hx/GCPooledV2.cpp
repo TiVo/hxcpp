@@ -95,7 +95,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#if (defined HX_MACOS || defined APPLETV)
+#if (defined HX_MACOS || defined APPLETV || defined IPHONE)
 #define USE_STD_MAP
 #else
 #include <tr1/unordered_map>
@@ -496,6 +496,7 @@ public:
         // calloc() and thus all members of this object are zeroed before
         // construction
         mGd = gd;
+        entriesPerBlockM = entriesPerBlockC;
     }
 
     // Returns the number of bytes allocated by this allocator (not all bytes
@@ -804,6 +805,10 @@ private:
 
     // List of all free entries
     Entry *freeM;
+
+    // Number of entries in a block (used only by the extractallocs program
+    // when examining memory dumps)
+    uint32_t entriesPerBlockM;
 };
 
 
@@ -1065,7 +1070,7 @@ public:
     ThreadGlobalData()
         :
 #if USE_ALLOCATOR_0
-        allocator_0(this),
+          allocator_0(this),
 #endif
 #if USE_ALLOCATOR_1
           allocator_1(this),
@@ -1080,20 +1085,29 @@ public:
           next_collect_threshold(TIVOCONFIG_GC_MIN_COLLECT_SIZE)
     {
         // Since calloc is used to allocate the memory for this, everything
-        // starts out zero
+        // starts out zero, so any value not set into the beacon array
+        // is zero.  The goal here is to store pointers to the various
+        // allocators in the beacon array so that the extractallocs program
+        // knows where to find them (and what size allocation they handle).
+        // The 'large allocator' uses 0 as its alloc size here to indicate
+        // that it's the large allocator.
+        mBeacon[1] = (void *) &allocator_large;
 #if USE_ALLOCATOR_0
-        mBeacon[0] = (void *) &allocator_0;
+        mBeacon[2] = (void *) TIVOCONFIG_GC_ALLOC_0_SIZE;
+        mBeacon[3] = (void *) &allocator_0;
 #endif
 #if USE_ALLOCATOR_1
-        mBeacon[1] = (void *) &allocator_1;
+        mBeacon[4] = (void *) TIVOCONFIG_GC_ALLOC_1_SIZE;
+        mBeacon[5] = (void *) &allocator_1;
 #endif
 #if USE_ALLOCATOR_2
-        mBeacon[2] = (void *) &allocator_2;
+        mBeacon[6] = (void *) TIVOCONFIG_GC_ALLOC_2_SIZE;
+        mBeacon[7] = (void *) &allocator_2;
 #endif
 #if USE_ALLOCATOR_3
-        mBeacon[3] = (void *) &allocator_3;
+        mBeacon[8] = (void *) TIVOCONFIG_GC_ALLOC_3_SIZE;
+        mBeacon[9] = (void *) &allocator_3;
 #endif
-        mBeacon[4] = (void *) &allocator_large;
     }
 
     inline uint32_t GetAllocatedBytes()
@@ -1119,8 +1133,10 @@ public:
 
     // Beacon to assist memory dump reader -- it uses the known location of
     // this array relative to the beginning of this object, to find the
-    // pointers to the various allocators
-    void *mBeacon[5];
+    // pointers to the various allocators.  This is an interleaved pattern:
+    // size-allocator-size-allocator ... large allocator size is 0.
+    // Terminated by two zero values.
+    void *mBeacon[12];
     
     ThreadGlobalData *next;
     
@@ -1196,6 +1212,9 @@ static std::list<hx::HashBase<Dynamic> *> g_weak_hash_list;
 
 // Each thread gets one of these
 static ThreadGlobalData *g_thread_global_data;
+#ifdef HXCPP_SINGLE_THREADED_APP
+static pthread_t g_haxe_thread;
+#endif
 
 // Number of non-GC-safe threads running
 static int g_thread_count;
@@ -1244,7 +1263,7 @@ static void *gBeacon[] =
       (void *) &g_roots,
       (void *) &g_thread_global_data,
 #ifdef TIVOCONFIG_GC_COLLECT_STACK_TRACES
-      (void *) &g_stacktrace_map,
+      (void *) g_stacktrace_map,
       (void *) &(g_stacktrace_map[sizeof(g_stacktrace_map) /
                                   sizeof(g_stacktrace_map[0])])
 #else
@@ -1275,6 +1294,12 @@ static inline void Unlock()
     pthread_mutex_unlock(&g_lock);
 }
 
+// GCC built-in atomics seem to be supported only on gcc versions > 4.2.
+// For ancient compilers (currently used only by mips), use a simple lock.
+// This will reduce performance on multi-threaded applications, but then
+// again, none of the programs we build using this ancient compiler are
+// multithreaded anyway
+#if ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 2)))
 
 static inline bool CompareAndSwapPtr(uintptr_t *where, uintptr_t test,
                                      uintptr_t set)
@@ -1287,6 +1312,44 @@ static inline bool CompareAndSwapInt(int *where, int test, int set)
 {
     return __sync_bool_compare_and_swap(where, test, set);
 }
+
+#else
+
+static pthread_mutex_t g_old_compiler_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static inline bool CompareAndSwapPtr(uintptr_t *where, uintptr_t test,
+                                     uintptr_t set)
+{
+    bool ret;
+    pthread_mutex_lock(&g_old_compiler_mutex);
+    if (*where == test) {
+        *where = set;
+        ret = true;
+    }
+    else {
+        ret = false;
+    }
+    pthread_mutex_unlock(&g_old_compiler_mutex);
+    return ret;
+}
+
+
+static inline bool CompareAndSwapInt(int *where, int test, int set)
+{
+    bool ret;
+    pthread_mutex_lock(&g_old_compiler_mutex);
+    if (*where == test) {
+        *where = set;
+        ret = true;
+    }
+    else {
+        ret = false;
+    }
+    pthread_mutex_unlock(&g_old_compiler_mutex);
+    return ret;
+}
+
+#endif
 
 
 static void make_key()
@@ -2248,6 +2311,16 @@ void *hx::InternalCreateConstBuffer(const void *inData, int inSize,
 }
 
 
+// Called to detect whether or not the calling thread is a haxe thread
+bool hx::IsHaxeThread()
+{
+#ifdef HXCPP_SINGLE_THREADED_APP
+    return pthread_equal(pthread_self(), g_haxe_thread);
+#else
+    return (GetThreadGlobalData() != NULL);
+#endif
+}
+
 // Called with [stack_top] of 0 by the main thread when the main thread has
 //   finished
 // Called at the beginning of a haxe thread function execution
@@ -2296,6 +2369,7 @@ void hx::SetTopOfStack(int *stack_top, bool)
     
     if (!g_thread_global_data) {
         g_thread_global_data = new ThreadGlobalData();
+        g_haxe_thread = pthread_self();
     }
 
     gd = g_thread_global_data;

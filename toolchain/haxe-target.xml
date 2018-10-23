@@ -136,9 +136,9 @@
   <file name = "src/hx/gc/Immix.cpp" if="HXCPP_USE_STOCK_GC" />
   <file name = "src/hx/gc/GcRegCapture.cpp" if="HXCPP_USE_STOCK_GC" />
   <!-- XXX At TiVo we have our own multi-endian supporting GC -->
-  <file name = "src/hx/GCPooledV2.cpp" unless="HXCPP_USE_STOCK_GC" if="TIVOCONFIG_TIVO_GC_V2" />
-  <file name = "src/hx/GCPooled.cpp" unless="HXCPP_USE_STOCK_GC || TIVOCONFIG_TIVO_GC_V2" />
-  <file name = "src/hx/GCThreadingNaive.cpp" unless="HXCPP_USE_STOCK_GC || TIVOCONFIG_TIVO_GC_V2" />
+  <file name = "src/hx/GCPooledV2.cpp" unless="HXCPP_USE_STOCK_GC || TIVOCONFIG_TIVO_GC_V1" />
+  <file name = "src/hx/GCPooled.cpp" unless="HXCPP_USE_STOCK_GC" if="TIVOCONFIG_TIVO_GC_V1" />
+  <file name = "src/hx/GCThreadingNaive.cpp" unless="HXCPP_USE_STOCK_GC" if="TIVOCONFIG_TIVO_GC_V1" />
   <file name = "src/hx/Hash.cpp"/>
   <file name = "src/hx/Interface.cpp"/>
   <file name = "src/hx/Lib.cpp"/>

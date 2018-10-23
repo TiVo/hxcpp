@@ -206,6 +206,7 @@ HXCPP_EXTERN_CLASS_ATTRIBUTES void MarkPopClass(hx::MarkContext *__inCtx);
 void GCCheckPointer(void *);
 
 
+bool IsHaxeThread();
 void SetTopOfStack(void *inTopOfStack,bool inForce=false);
 
 // Called internally before and GC operations

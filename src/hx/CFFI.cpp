@@ -433,6 +433,15 @@ hx::Object * alloc_array(int arg1)
 }
 
 
+hx::Object * alloc_byte_array_from_data(unsigned char *data, int size)
+{
+    Array<unsigned char> array(size, size);
+    Array_obj<unsigned char> *ret = array.GetPtr();
+    ret->memcpy(0, data, size);
+    return ret;
+}
+
+
 
 // Array access - fast if possible - may return null
 // Resizing the array may invalidate the pointer
@@ -812,6 +821,11 @@ void  val_gc_add_root(hx::Object **inRoot)
 void  val_gc_remove_root(hx::Object **inRoot)
 {
    hx::GCRemoveRoot(inRoot);
+}
+
+bool  gc_is_haxe_thread()
+{
+    return hx::IsHaxeThread();
 }
 
 void  gc_set_top_of_stack(int *inTopOfStack,bool inForce)

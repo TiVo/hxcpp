@@ -7,6 +7,8 @@
 <setenv name="MACOSX_DEPLOYMENT_TARGET" value="10.5" unless="MACOSX_DEPLOYMENT_TARGET" />
 <path name="${DEVELOPER_DIR}/usr/bin" />
 
+<set name="HXCPP_CLANG" value="1"/>
+<set name="HXCPP_CPP11" value="1"/>
 
 <compiler id="darwin" exe="g++" if="macos">
   <exe name="xcrun --sdk macosx${MACOSX_VER} clang++" if="HXCPP_CLANG" />

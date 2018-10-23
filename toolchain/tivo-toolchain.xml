@@ -38,6 +38,7 @@
   <flag value="-fdata-sections" if="bug_437316" />
   <flag value="-ffunction-sections" unless="mipsOrDebug"/>
   <flag value="-ffunction-sections" if="bug_437316" />
+  <flag value="-ffunction-sections" if="HXCPP_APP_CHORDING" />
   <flag value="-march=armv7-a" if="tivo-arm" />
   <flag value="-fpic" if="dynamic_link" />
   <flag value="-fPIC" if="dynamic_link" />
@@ -118,9 +119,10 @@
   <flag value="-Wl,-rpath-link,${ROOT}/lib" />
   <flag value="-rdynamic"/>
   <flag value="-Wl,--export-dynamic"/> <!-- same as -rdynamic? -->
-  <flag value="-Wl,--gc-sections" unless="debug"/>
+  <flag value="-Wl,--gc-sections" unless="mipsOrDebug"/>
   <flag value="-Wl,--no-keep-memory"/>
   <flag value="-Wl,--reduce-memory-overheads"/>
+  <flag value="-Wl,--script=${OBJDIR}/chording.ldscript" if="HXCPP_APP_CHORDING tivo-mips" />
   <flag value="-L${ISM_OBJDIR}" />
   <flag value="-L${ISM_OBJDIR}/plugins" />
   <flag value="-L${ROOT}/lib" />

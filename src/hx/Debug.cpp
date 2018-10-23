@@ -2332,6 +2332,21 @@ static void *__hxcpp_function_called_dump_thread_main(void *)
     
     while (true) {
         struct stat statbuf;
+
+        // see if we want to reset the count of haxe functions called
+        if (stat("/tmp/reset_haxe_functions", &statbuf) == 0) {
+            fprintf(stderr, "Resetting count of haxe functions called\n");
+            pthread_mutex_lock(&g_functionCalledMutex);
+            std::map<std::string, long>::iterator it = g_functionCalledMap.begin();
+            while (it != g_functionCalledMap.end()) {
+                it->second = 0;
+                it++;
+            }
+            pthread_mutex_unlock(&g_functionCalledMutex);
+            unlink("/tmp/reset_haxe_functions");
+            continue;
+        }
+
         if (stat("/tmp/dump_haxe_functions", &statbuf) != 0) {
             sleep(1);
             continue;

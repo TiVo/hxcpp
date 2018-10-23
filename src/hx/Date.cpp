@@ -386,6 +386,9 @@ double __hxcpp_from_utc(int inYear,int inMonth,int inDay,int inHour, int inMin, 
    time.tm_min   = inMin;
    time.tm_sec   = inSeconds;
 
+#ifndef HX_ANDROID
+   return (timegm(&time) + ((double) inMilliseconds * 0.001));
+#else
    time_t z = mktime(&time);
    time_t t = z + __hxcpp_timezone_offset(z);
 
@@ -393,5 +396,6 @@ double __hxcpp_from_utc(int inYear,int inMonth,int inDay,int inHour, int inMin, 
    __internal_localtime( t, &local_tm);
 
    return (mktime(&local_tm) + ((double) inMilliseconds * 0.001));
+#endif
 }
 
