@@ -1433,16 +1433,13 @@ static void check_size_statistics_threshold(uint32_t size)
         return;
     }
 
-    Lock();
-
     // Save away the allocation size
     g_size_statistics[size] += 1;
 
     // Tracks the number of allocs since the last "recent allocs" plog
     static int g_recent_allocs;
 
-    if (++g_recent_allocs != g_size_statistics_threshold) {
-        Unlock();
+    if (g_recent_allocs != g_size_statistics_threshold) {
         return;
     }
 
@@ -1484,8 +1481,6 @@ static void check_size_statistics_threshold(uint32_t size)
               (running_pct < 10) ? " ": "", running_pct);
         it2++;
     }
-
-    Unlock();
 }
 #endif
 

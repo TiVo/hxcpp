@@ -209,10 +209,42 @@ void __hxcpp_stdlibs_boot()
 
 void __trace(Dynamic inObj, Dynamic inData)
 {
+    const char *fileName;
+    int lineNumber;
+    const char *msg;
+
+    Dynamic d1, d2;
+
+    if (inData == null()) {
+        fileName = "?";
+        lineNumber = 0;
+    }
+    else {
+        d1 = inData->__Field(HX_CSTRING("fileName"), HX_PROP_DYNAMIC);
+        if (d1 == null()) {
+            fileName = "?";
+        }
+        else {
+            fileName = d1->toString().__s;
+        }
+        d2 = inData->__Field(HX_CSTRING("lineNumber"), HX_PROP_DYNAMIC);
+        if (d2 == null()) {
+            lineNumber = 0;
+        }
+        else {
+            lineNumber = d2->__ToInt();
+        }
+    }
+
+    if (inObj.GetPtr()) {
+        msg = inObj->toString().__s;
+    }
+    else {
+        msg = "null";
+    }
+
 #ifdef TIZEN
-   AppLogInternal(inData==null() ? "?" : inData->__Field( HX_CSTRING("fileName") , HX_PROP_DYNAMIC) ->toString().__s,
-      inData==null() ? 0 : inData->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC)->__ToInt(),
-      "%s\n", inObj.GetPtr() ? inObj->toString().__s : "null" );
+    AppLogInternal(fileName, lineNumber, "%s\n", msg);
 #else
 #ifdef HX_UTF8_STRINGS
    #if defined(HX_ANDROID) && !defined(HXCPP_EXE_LINK)
@@ -223,22 +255,16 @@ void __trace(Dynamic inObj, Dynamic inData)
    syslog(LOG_ERR, "%s:%d: %s",
    #elif defined(IPHONE)
     syslog(LOG_ERR, "%s:%d: %s",
-           inData==null() ? "?" : inData->__Field( HX_CSTRING("fileName") , HX_PROP_DYNAMIC) ->toString().__s,
-           inData==null() ? 0 : inData->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC)->__ToInt(),
-           inObj.GetPtr() ? inObj->toString().__s : "null" );
+           fileName, lineNumber, msg);
           
     printf("%s:%d: %s\n",
    #else
    printf("%s:%d: %s\n",
    #endif
-               inData==null() ? "?" : inData->__Field( HX_CSTRING("fileName") , HX_PROP_DYNAMIC) ->toString().__s,
-               inData==null() ? 0 : inData->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC)->__ToInt(),
-               inObj.GetPtr() ? inObj->toString().__s : "null" );
+               fileName, lineNumber, msg);
 #else
    printf( "%S:%d: %S\n",
-               inData->__Field( HX_CSTRING("fileName") , HX_PROP_DYNAMIC)->__ToString().__s,
-               inData->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC)->__ToInt(),
-               inObj.GetPtr() ? inObj->toString().__s : L"null" );
+           fileName, lineNumber, msg);
 #endif
 #endif
 }

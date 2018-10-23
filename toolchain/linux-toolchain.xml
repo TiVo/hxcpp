@@ -37,7 +37,7 @@
   <flag value="-fvisibility=hidden"/>
   <cppflag value="-frtti"/>
   <flag value="-g" if="debug"/>
-  <flag value="-Os" unless="debug"/>
+  <flag value="-O3" unless="debug" />
   <flag value="-fpic" if="dynamic_link"/>
   <flag value="-fPIC" if="dynamic_link"/>
   <cppflag value="-Wno-invalid-offsetof" />

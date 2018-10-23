@@ -15,31 +15,28 @@ HAXELIB_NAME := hxcpp
 # doesn't need one to be generated
 SUPPRESS_HAXELIB_JSON := 1
 
+# To ensure that the libs are built before the bom files are generated
+# (avoiding the problem where the bom process will miss the libs), we
+# assign our targets in PRE_BOM_TARGETS, not TARGETS.
+
 # Built targets of hxcpp haxelib
-TARGETS += BuildBuildN BuildHxcppN BuildRunN BuildLibs
+PRE_BOM_TARGETS += BuildBuildN BuildHxcppN BuildRunN BuildLibs
 
 ifeq ($(HAXE_BUILD_TARGET),android)
-TARGETS += BuildNative
 PRE_BOM_TARGETS += BuildNative
 endif
 
 ifeq ($(HAXE_BUILD_TARGET),ios)
-TARGETS += BuildNative
 PRE_BOM_TARGETS += BuildNative
 endif
 
 ifeq ($(HAXE_BUILD_TARGET),tvos)
-TARGETS += BuildNative
 PRE_BOM_TARGETS += BuildNative
 endif
 
 LTDIRT += $(HAXELIB_STAGED_DIR)/build.n
 LTDIRT += $(HAXELIB_STAGED_DIR)/hxcpp.n
 LTDIRT += $(HAXELIB_STAGED_DIR)/run.n
-
-# Ensure that the libs are built before the bom files are generated, otherwise
-# the bom process will miss the libs
-PRE_BOM_TARGETS += BuildBuildN BuildHxcppN BuildRunN BuildLibs
 
 ifneq ($(HAXE_BUILD_TARGET),html5)
 ifneq ($(HAXE_BUILD_TARGET),java)

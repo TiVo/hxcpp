@@ -7,12 +7,15 @@
 <set name="compiler_arch" value="i686" if="tivo-x86" />
 <set name="compiler_arch" value="arm" if="tivo-arm" />
 <set name="compiler_abi" value="eabi" if="tivo-arm" />
-
-<set name="mipsOrDebug" value="1" if="tivo-mips || debug"/>
+<set name="compiler_arch" value="aarch64" if="tivo-arm64" />
 
 <!-- anymips is set for any mips flavor -->
 <set name="anymips" value="1" if="tivo-mips" />
 <set name="anymips" value="1" if="tivo-mipsel" />
+
+<!-- anyarm is set for any arm flavor -->
+<set name="anyarm" value="1" if="tivo-arm" />
+<set name="anyarm" value="1" if="tivo-arm64" />
 
 <set name="NOTMK" value="1" if="TOSHIBA_SDK_SYSROOT" />
 
@@ -23,7 +26,7 @@
   <flag value="-fno-inline" if="tivo-x86" />
   <flag value="-O0" if="debug" unless="bug_437316" />
   <flag value="-Os" if="bug_437316" />
-  <flag value="-Os" unless="debug"/>
+  <flag value="-O3" unless="debug || bug_437316" />
   <flag value="-fno-strict-aliasing" unless="debug" />
   <flag value="-fno-strict-aliasing" if="bug_437316" />
   <!-- Commented out for now in an attempt to work around this compiler error:
@@ -34,9 +37,9 @@
   <flag value="-mtune=5kf" if="anymips" />
   <flag value="-mbranch-likely" if="anymips" />
   <flag value="-Wa,--trap" if="anymips" />
-  <flag value="-fdata-sections" unless="mipsOrDebug"/>
+  <flag value="-fdata-sections" unless="debug" />
   <flag value="-fdata-sections" if="bug_437316" />
-  <flag value="-ffunction-sections" unless="mipsOrDebug"/>
+  <flag value="-ffunction-sections" unless="debug"/>
   <flag value="-ffunction-sections" if="bug_437316" />
   <flag value="-ffunction-sections" if="HXCPP_APP_CHORDING" />
   <flag value="-march=armv7-a" if="tivo-arm" />
@@ -47,6 +50,7 @@
   <flag value="-DBOOTARCH=MIPS" if="anymips" />
   <flag value="-DBOOTARCH=X86" if="tivo-x86" />
   <flag value="-DBOOTARCH=ARM" if="tivo-arm" />
+  <flag value="-DBOOTARCH=ARM64" if="tivo-arm64" />
   <flag value="-DHPK_NO_SYMBOL_VERSIONING" if="tivo-x86" />
   <flag value="-DOSTYPE=Linux" />
   <flag value="-DCONFIG_DEBUG_PRINT_IN_RELEASE=1" />
@@ -76,6 +80,7 @@
   <cppflag value="-frtti" /> <!-- think this on by default, so no harm -->
   <flag value="-DHX_LINUX" /> <!-- think we are mosty linux-y -->
   <flag value="-DHXCPP_BIG_ENDIAN" if="HXCPP_BIG_ENDIAN"/>
+  <flag value="-DHXCPP_M64" if="tivo-arm64" />
   <include name="toolchain/common-defines.xml" />
   <!-- end HXCPP specific stuff -->
   <flag value="-c" />
@@ -119,7 +124,7 @@
   <flag value="-Wl,-rpath-link,${ROOT}/lib" />
   <flag value="-rdynamic"/>
   <flag value="-Wl,--export-dynamic"/> <!-- same as -rdynamic? -->
-  <flag value="-Wl,--gc-sections" unless="mipsOrDebug"/>
+  <flag value="-Wl,--gc-sections" unless="debug"/>
   <flag value="-Wl,--no-keep-memory"/>
   <flag value="-Wl,--reduce-memory-overheads"/>
   <flag value="-Wl,--script=${OBJDIR}/chording.ldscript" if="HXCPP_APP_CHORDING tivo-mips" />
