@@ -155,8 +155,14 @@ public:
 
    //virtual void *__root();
    virtual void __Mark(hx::MarkContext *__inCtx) { }
+   // TiVo - don't conditionally include this virtual function because it
+   // can lead to mismatches in vtable layout if some files are compiled with
+   // HXCPP_VISIT_ALLOCS defined and some are not.  The extra cost of an
+   // unused pointer in a vtable isn't worth the hassle of weird runtime bugs.
    #ifdef HXCPP_VISIT_ALLOCS
    virtual void __Visit(hx::VisitContext *__inCtx) { }
+   #else
+   virtual void __Visit(void *) { }
    #endif
    virtual bool __Is(hx::Object *inClass) const { return true; }
    virtual hx::Object *__ToInterface(const hx::type_info &inInterface) { return 0; }

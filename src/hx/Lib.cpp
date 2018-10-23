@@ -2,7 +2,13 @@
 
 #include <stdio.h>
 #include <string>
+
+#ifdef USE_STD_MAP
+#include <map>
+#else
 #include <tr1/unordered_map>
+#endif
+
 #include <vector>
 #include <stdlib.h>
 
@@ -88,10 +94,22 @@ void hxFreeLibrary(Module inModule) { dlclose(inModule); }
 
 #endif
 
+#ifdef USE_STD_MAP
+
+#ifdef HX_UTF8_STRINGS
+typedef std::map<std::string,Module> LoadedModule;
+#else
+typedef std::map<std::wstring,Module> LoadedModule;
+#endif
+
+#else
+
 #ifdef HX_UTF8_STRINGS
 typedef std::tr1::unordered_map<std::string,Module> LoadedModule;
 #else
 typedef std::tr1::unordered_map<std::wstring,Module> LoadedModule;
+#endif
+
 #endif
 
 static LoadedModule sgLoadedModule;
@@ -125,52 +143,136 @@ public:
    Dynamic __run()
    {
       HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0, functionName, __FILE__, __LINE__,0);
-      if (mArgCount!=0) throw HX_INVALID_ARG_COUNT;
-      if (mProc==0) hx::Throw( HX_NULL_FUNCTION_POINTER );
+      /**
+       * TiVo workaround -- this code used to throw a Dynamic allocated on the
+       * stack; this appears to tickle some kind of compiler bug on dev-arm
+       * builds.  Throwing a value declared not on the stack appears to solve
+       * this issue.
+       **/
+      if (mArgCount!=0) {
+          static Dynamic d(HX_INVALID_ARG_COUNT);
+          throw d;
+      }
+      if (mProc==0) {
+          static Dynamic d(HX_NULL_FUNCTION_POINTER);
+          hx::Throw(d);
+      }
       return ((prim_0)mProc)();
    }
    Dynamic __run(D a)
    {
       HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
-      if (mArgCount!=1) throw HX_INVALID_ARG_COUNT;
-      if (mProc==0) hx::Throw( HX_NULL_FUNCTION_POINTER );
+      /**
+       * TiVo workaround -- this code used to throw a Dynamic allocated on the
+       * stack; this appears to tickle some kind of compiler bug on dev-arm
+       * builds.  Throwing a value declared not on the stack appears to solve
+       * this issue.
+       **/
+      if (mArgCount!=1) {
+          static Dynamic d(HX_INVALID_ARG_COUNT);
+          
+          throw d;
+      }
+      if (mProc==0) {
+          static Dynamic d(HX_NULL_FUNCTION_POINTER);
+          hx::Throw(d);
+      }
       return ((prim_1)mProc)(a.GetPtr());
    }
    Dynamic __run(D a,D b)
    {
       HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
-      if (mArgCount!=2) throw HX_INVALID_ARG_COUNT;
-      if (mProc==0) hx::Throw( HX_NULL_FUNCTION_POINTER );
+      /**
+       * TiVo workaround -- this code used to throw a Dynamic allocated on the
+       * stack; this appears to tickle some kind of compiler bug on dev-arm
+       * builds.  Throwing a value declared not on the stack appears to solve
+       * this issue.
+       **/
+      if (mArgCount!=2) {
+          static Dynamic d(HX_INVALID_ARG_COUNT);
+          throw d;
+      }
+      if (mProc==0) {
+          static Dynamic d(HX_NULL_FUNCTION_POINTER);
+          hx::Throw(d);
+      }
       return ((prim_2)mProc)(a.GetPtr(),b.GetPtr());
    }
    Dynamic __run(D a,D b,D c)
    {
       HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
-      if (mArgCount!=3) throw HX_INVALID_ARG_COUNT;
-      if (mProc==0) hx::Throw( HX_NULL_FUNCTION_POINTER );
+      /**
+       * TiVo workaround -- this code used to throw a Dynamic allocated on the
+       * stack; this appears to tickle some kind of compiler bug on dev-arm
+       * builds.  Throwing a value declared not on the stack appears to solve
+       * this issue.
+       **/
+      if (mArgCount!=3) {
+          static Dynamic d(HX_INVALID_ARG_COUNT);
+          throw d;
+      }
+      if (mProc==0) {
+          static Dynamic d(HX_NULL_FUNCTION_POINTER);
+          hx::Throw(d);
+      }
       return ((prim_3)mProc)(a.GetPtr(),b.GetPtr(),c.GetPtr());
    }
    Dynamic __run(D a,D b,D c,D d)
    {
       HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
-      if (mArgCount!=4) throw HX_INVALID_ARG_COUNT;
-      if (mProc==0) hx::Throw( HX_NULL_FUNCTION_POINTER );
+      /**
+       * TiVo workaround -- this code used to throw a Dynamic allocated on the
+       * stack; this appears to tickle some kind of compiler bug on dev-arm
+       * builds.  Throwing a value declared not on the stack appears to solve
+       * this issue.
+       **/
+      if (mArgCount!=4) {
+          static Dynamic d(HX_INVALID_ARG_COUNT);
+          throw d;
+      }
+      if (mProc==0) {
+          static Dynamic d(HX_NULL_FUNCTION_POINTER);
+          hx::Throw(d);
+      }
       return ((prim_4)mProc)(a.GetPtr(),b.GetPtr(),c.GetPtr(),d.GetPtr());
    }
    Dynamic __run(D a,D b,D c,D d,D e)
    {
       HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
-      if (mArgCount!=5) throw HX_INVALID_ARG_COUNT;
-      if (mProc==0) hx::Throw( HX_NULL_FUNCTION_POINTER );
+      /**
+       * TiVo workaround -- this code used to throw a Dynamic allocated on the
+       * stack; this appears to tickle some kind of compiler bug on dev-arm
+       * builds.  Throwing a value declared not on the stack appears to solve
+       * this issue.
+       **/
+      if (mArgCount!=5) {
+          static Dynamic d(HX_INVALID_ARG_COUNT);
+          throw d;
+      }
+      if (mProc==0) {
+          static Dynamic d(HX_NULL_FUNCTION_POINTER);
+          hx::Throw(d);
+      }
       return ((prim_5)mProc)(a.GetPtr(),b.GetPtr(),c.GetPtr(),d.GetPtr(),e.GetPtr());
    }
 
    Dynamic __Run(const Array<Dynamic> &inArgs)
    {
       HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
-      if (mArgCount!=-1 && mArgCount!=inArgs->length)
-         throw HX_INVALID_ARG_COUNT;
-      if (mProc==0) hx::Throw( HX_NULL_FUNCTION_POINTER );
+      /**
+       * TiVo workaround -- this code used to throw a Dynamic allocated on the
+       * stack; this appears to tickle some kind of compiler bug on dev-arm
+       * builds.  Throwing a value declared not on the stack appears to solve
+       * this issue.
+       **/
+      if (mArgCount!=-1 && mArgCount!=inArgs->length) {
+          static Dynamic d(HX_INVALID_ARG_COUNT);
+          throw d;
+      }
+      if (mProc==0) {
+          static Dynamic d(HX_NULL_FUNCTION_POINTER);
+          hx::Throw(d);
+      }
       return ((prim_mult)mProc)( (hx::Object **)inArgs->GetBase(), inArgs->length );
    }
 
@@ -334,7 +436,12 @@ String FindHaxelib(String inLib)
 
 #endif
 
+#ifdef USE_STD_MAP
+typedef std::map<std::string,void *> RegistrationMap;
+#else
 typedef std::tr1::unordered_map<std::string,void *> RegistrationMap;
+#endif
+
 RegistrationMap *sgRegisteredPrims=0;
 
 

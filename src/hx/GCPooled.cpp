@@ -3,7 +3,18 @@
 #endif
 #include <hxcpp.h>
 #include <list>
+
+// Mac OS X implementation of std::tr1::unordered_map is buggy?
+#ifdef HX_MACOS
+#define USE_STD_MAP
+#endif
+
+#ifdef USE_STD_MAP
+#include <map>
+#else
 #include <tr1/unordered_map>
+#endif
+
 #include <pthread.h>
 #include <set>
 #include <signal.h>
@@ -48,7 +59,7 @@
 #define MARK_A                  (1 << 29)
 #define MARK_B                  (1 << 28)
 
-// Flags for use in Entry.flags
+// Flags for use in Entry flags
 #define LAST_MARK_MASK          (MARK_A | MARK_B)
 #define IS_OBJECT_FLAG          (1 << 27)
 #define IS_WEAK_REF_FLAG        (1 << 26)
@@ -105,8 +116,14 @@ typedef struct Entry
         Entry *next;
         struct LargeEntry *largeNext;
     };
-    // Flags describing the allocation
-    uint32_t flags;
+    // Flags describing the allocation.  Note that the flags are actually
+    // stored at (bytes - 4 bytes), to allow the technique that hxcpp uses
+    // for strings to work, which is to treat data pointers as int[] and
+    // then index by -1 to get a 32 bit flags value.  Therefore this field
+    // just reserves space for the flags, but the flags are actually the 4
+    // bytes immediately before [bytes], which may or may not be at the
+    // address of the flags_spacing field.
+    uint32_t flags_spacing;
     // The allocated data
     union {
         // This needs to match the alignment of any data type that would be
@@ -134,6 +151,10 @@ typedef struct LargeEntry
 #define LARGE_ENTRY_FROM_PTR(ptr)                                            \
     ((LargeEntry *) (((uintptr_t) (ptr)) - (offsetof(LargeEntry, entry) +    \
                                             offsetof(Entry, bytes))))
+
+// Get a reference to the flags of an entry
+#define FLAGS_OF_ENTRY(entry) (((uint32_t *) ((entry)->bytes))[-1])
+
 
 // Helper function that allocates (from the system -- i.e. malloc)
 // a chunk of memory of the given size
@@ -322,8 +343,15 @@ public:
 // This is the Object to id mapping; this is unfortunate stuff but the GC API
 // requires it.  This static data is protected by GCThreading_Lock().
 #ifdef HXCPP_M64
+
+#ifdef USE_STD_MAP
+static std::map<uintptr_t, int> gObjMap;
+static std::map<int, uintptr_t> gIdMap;
+#else
 static std::tr1::unordered_map<uintptr_t, int> gObjMap;
 static std::tr1::unordered_map<int, uintptr_t> gIdMap;
+#endif
+
 static int gCurrentId;
 #endif
 
@@ -373,7 +401,11 @@ public:
 
     // This maps allocations to the weak refs to them.  Protected by
     // GCThreading_Lock().
+#ifdef USE_STD_MAP
+    std::map<void *, std::list<GCWeakRef *> > g_weak_ref_map;
+#else
     std::tr1::unordered_map<void *, std::list<GCWeakRef *> > g_weak_ref_map;
+#endif
 
     // Garbage collection can be temporarily disabled, although it's not clear
     // why this would ever be done.  Start GC disabled until it is ready, this
@@ -391,7 +423,11 @@ public:
 
     // This maps objects to finalizer data - it is expected that very few
     // finalizers will be used
+#ifdef USE_STD_MAP
+    std::map<hx::Object *, FinalizerData> g_finalizers;
+#else
     std::tr1::unordered_map<hx::Object *, FinalizerData> g_finalizers;
+#endif
 
     std::list<hx::HashBase<Dynamic> *> g_weak_hash_list;
 };
@@ -413,7 +449,11 @@ static GCPooled_Globals globals;
 static void RemoveWeakRef(GCWeakRef *wr)
 {
     void *ptr = wr->mRef.mPtr;
+#ifdef USE_STD_MAP
+    std::map<void *, std::list<GCWeakRef *> >::iterator iter = 
+#else
     std::tr1::unordered_map<void *, std::list<GCWeakRef *> >::iterator iter = 
+#endif
         g_weak_ref_map.find(ptr);
     if (iter == g_weak_ref_map.end()) {
         return;
@@ -485,7 +525,7 @@ public:
 
         // Set its flags to indicate what block it was allocated from and
         // whether or not it is an object
-        entry->flags = (g_mark | allocatorFlagC | is_object_flag);
+        FLAGS_OF_ENTRY(entry) = (g_mark | allocatorFlagC | is_object_flag);
 
         // Remove the entry from the free list
         freeM = entry->next;
@@ -511,7 +551,8 @@ public:
         }
 
         // Didn't fit, so must acquire a new value.
-        void *newptr = InternalNewLocked(size, entry->flags & IS_OBJECT_FLAG);
+        void *newptr = InternalNewLocked
+            (size, FLAGS_OF_ENTRY(entry) & IS_OBJECT_FLAG);
         if (!newptr) {
             return 0;
         }
@@ -555,7 +596,7 @@ public:
                 // to be an Entry, and the Entry is allocated.
                 return (((((uintptr_t) (e - first)) %
                           sizeof(SizedEntry)) == 0) &&
-                        (entry->flags & LAST_MARK_MASK));
+                        (FLAGS_OF_ENTRY(entry) & LAST_MARK_MASK));
             }
             block = block->next;
         } while (block != blocksM);
@@ -578,7 +619,7 @@ public:
             int free_count = 0;
             for (int i = 0; i < entriesPerBlockC; i++) {
                 Entry *entry = (Entry *) &(block->entries[i]);
-                int entry_mark = entry->flags & LAST_MARK_MASK;
+                int entry_mark = FLAGS_OF_ENTRY(entry) & LAST_MARK_MASK;
                 if (entry_mark == g_mark) {
                     // Still used
                     continue;
@@ -590,8 +631,9 @@ public:
                     // No, was already free, so has already been processed
                     continue;
                 }
-                if (entry->flags & (HAS_FINALIZER_FLAG | IS_WEAK_REF_FLAG)) {
-                    if (entry->flags & HAS_FINALIZER_FLAG) {
+                if (FLAGS_OF_ENTRY(entry) &
+                    (HAS_FINALIZER_FLAG | IS_WEAK_REF_FLAG)) {
+                    if (FLAGS_OF_ENTRY(entry) & HAS_FINALIZER_FLAG) {
                         RunFinalizerLocked((hx::Object *) (entry->bytes));
                     }
                     // If it's a weak reference object itself, then remove it
@@ -791,25 +833,33 @@ static GCPooled_Allocators allocators;
 
 static void HandleWeakRefs()
 {
+#ifdef USE_STD_MAP
+    std::map<void *, std::list<GCWeakRef *> >::iterator iter =
+        g_weak_ref_map.begin();
+    // Must accumulate elements to remove since the iterator cannot be
+    // disturbed in pre-C++11 (such as Mac OS X)
+    std::list<void *> removeList;
+#else
     std::tr1::unordered_map<void *, std::list<GCWeakRef *> >::iterator iter =
         g_weak_ref_map.begin();
+#endif
 
     while (iter != g_weak_ref_map.end()) {
         Entry *entry = ENTRY_FROM_PTR(iter->first);
-        if ((entry->flags & LAST_MARK_MASK) == g_mark) {
+        if ((FLAGS_OF_ENTRY(entry) & LAST_MARK_MASK) == g_mark) {
             iter++;
             continue;
         }
         // Special handling of weak refs to function objects: if the 'this'
         // pointer is still alive, then mark the function object.
-        if (entry->flags & IS_OBJECT_FLAG) {
+        if (FLAGS_OF_ENTRY(entry) & IS_OBJECT_FLAG) {
             hx::Object *obj = (hx::Object *) iter->first;
             // It's an object, but is it a function object?
             if (obj->__GetType() == vtFunction) {
                 hx::Object *thiz = (hx::Object *) obj->__GetHandle();
                 // It's a function object, but does it have a "this"?  And
                 // if so, is the "this" marked?
-                if (thiz && ((ENTRY_FROM_PTR(thiz)->flags &
+                if (thiz && ((FLAGS_OF_ENTRY(ENTRY_FROM_PTR(thiz)) &
                               LAST_MARK_MASK) == g_mark)) {
                     // So it is a weakly ref'd function object with a this
                     // pointer that is live - mark the function object as live
@@ -825,8 +875,21 @@ static void HandleWeakRefs()
         while (iter2 != refs.end()) {
             (*iter2++)->mRef.mPtr = 0;
         }
+#ifdef USE_STD_MAP
+        removeList.push_back(iter->first);
+        iter++;
+#else
         iter = g_weak_ref_map.erase(iter);
+#endif
     }
+
+#ifdef USE_STD_MAP
+    std::list<void *>::iterator removeIter = removeList.begin();
+    while (removeIter != removeList.end()) {
+        g_weak_ref_map.erase(*removeIter);
+        removeIter++;
+    }
+#endif
 }
 
 
@@ -938,14 +1001,14 @@ static void SetFinalizerLocked(hx::Object *obj, hx::finalizer f,
         FinalizerData &fd = g_finalizers[obj];
         fd.f = f;
         fd.internal_finalizer = internal_finalizer;
-        ENTRY_FROM_PTR(obj)->flags |= HAS_FINALIZER_FLAG;
+        FLAGS_OF_ENTRY(ENTRY_FROM_PTR(obj)) |= HAS_FINALIZER_FLAG;
     }
     else {
         if (g_finalizers.count(obj) > 0) {
             delete g_finalizers[obj].internal_finalizer;
             g_finalizers.erase(obj);
         }
-        ENTRY_FROM_PTR(obj)->flags &= ~HAS_FINALIZER_FLAG;
+        FLAGS_OF_ENTRY(ENTRY_FROM_PTR(obj)) &= ~HAS_FINALIZER_FLAG;
     }
 }
 
@@ -957,7 +1020,7 @@ static void RunFinalizerLocked(hx::Object *obj)
     // crazy like attempt to delete the finalizer itself
     FinalizerData fd = g_finalizers[obj];
     g_finalizers.erase(obj);
-    ENTRY_FROM_PTR(obj)->flags &= ~HAS_FINALIZER_FLAG;
+    FLAGS_OF_ENTRY(ENTRY_FROM_PTR(obj)) &= ~HAS_FINALIZER_FLAG;
 
     // Do not hold the global GC lock while calling the finalizer
     GCThreading_Unlock();
@@ -1042,7 +1105,7 @@ static void *LargeAllocLocked(int size, uint32_t is_object_flag)
     }
 
     entry->size = size;
-    entry->entry.flags = g_mark | is_object_flag;
+    FLAGS_OF_ENTRY(&(entry->entry)) = g_mark | is_object_flag;
 
     void *ptr = entry->entry.bytes;
 
@@ -1066,8 +1129,8 @@ static void *LargeReallocLocked(LargeEntry *entry, int size)
     // When moving from a large size down into a small, must copy over, and
     // can immediately reclaim the large
     if (size <= 128) {
-        void *new_ptr =
-            InternalNewLocked(size, entry->entry.flags & IS_OBJECT_FLAG);
+        void *new_ptr = InternalNewLocked
+            (size, FLAGS_OF_ENTRY(&(entry->entry)) & IS_OBJECT_FLAG);
         memcpy(new_ptr, old_ptr, size);
         g_total_size -= old_size;
         RemoveLargeEntry(entry, entry->entry.largeNext);
@@ -1099,10 +1162,11 @@ static void *LargeReallocLocked(LargeEntry *entry, int size)
 
 static void MarkPointers(void *start, void *end)
 {
-    int *start_ptr = (int *) start;
-    int *end_ptr = (int *) end;
+    uintptr_t start_ptr = (uintptr_t) start;
+    uintptr_t end_ptr = (uintptr_t) end;
     while (start_ptr < end_ptr) {
-        void *ptr = * (void **) start_ptr++;
+        void *ptr = * (void **) start_ptr;
+        start_ptr += sizeof(uintptr_t);
         // Cannot possibly be a valid pointer if it doesn't have enough room
         // for an entry
         if (((uintptr_t) ptr) <= sizeof(Entry)) {
@@ -1114,7 +1178,7 @@ static void MarkPointers(void *start, void *end)
             g_32b_allocator.Contains(entry) ||
             g_128b_allocator.Contains(entry) ||
             HasLargeEntry(ptr)) {
-            if (entry->flags & IS_OBJECT_FLAG) {
+            if (FLAGS_OF_ENTRY(entry) & IS_OBJECT_FLAG) {
                 hx::MarkObjectAlloc((hx::Object *) ptr, 0);
             }
             else {
@@ -1148,7 +1212,7 @@ hx::Object *__hxcpp_weak_ref_create(Dynamic inObject)
 {
     GCWeakRef *ret = new GCWeakRef(inObject);
 
-    ENTRY_FROM_PTR(ret)->flags |= IS_WEAK_REF_FLAG;
+    FLAGS_OF_ENTRY(ENTRY_FROM_PTR(ret)) |= IS_WEAK_REF_FLAG;
  
     if (inObject.mPtr) {
         GCThreading_Lock();
@@ -1266,17 +1330,18 @@ bool hx::IsWeakRefValid(hx::Object *inPtr)
 {
     Entry *entry = ENTRY_FROM_PTR(inPtr);
 
-    if ((entry->flags & LAST_MARK_MASK) == g_mark) {
+    if ((FLAGS_OF_ENTRY(entry) & LAST_MARK_MASK) == g_mark) {
         return true;
     }
 
     // Not marked, but handle special case of member closure - check if the
     // 'this' pointer is still alive
-    if ((entry->flags & IS_OBJECT_FLAG) && (inPtr->__GetType() == vtFunction)) {
+    if ((FLAGS_OF_ENTRY(entry) & IS_OBJECT_FLAG) &&
+        (inPtr->__GetType() == vtFunction)) {
         hx::Object *thiz = (hx::Object *) inPtr->__GetHandle();
         // It's a function object, but does it have a "this"?  And
         // if so, is the "this" marked?
-        if (thiz && ((ENTRY_FROM_PTR(thiz)->flags &
+        if (thiz && ((FLAGS_OF_ENTRY(ENTRY_FROM_PTR(thiz)) &
                       LAST_MARK_MASK) == g_mark)) {
             // So it is a weakly ref'd function object with a this pointer
             // that is live - mark it as live as well
@@ -1420,13 +1485,13 @@ void *hx::InternalRealloc(void *ptr, int size)
 
     GCThreading_Lock();
 
-    if (entry->flags & IN_8B_ALLOCATOR_FLAG) {
+    if (FLAGS_OF_ENTRY(entry) & IN_8B_ALLOCATOR_FLAG) {
         ret = g_8b_allocator.Reallocate(entry, size);
     }
-    else if (entry->flags & IN_32B_ALLOCATOR_FLAG) {
+    else if (FLAGS_OF_ENTRY(entry) & IN_32B_ALLOCATOR_FLAG) {
         ret = g_32b_allocator.Reallocate(entry, size);
     }
-    else if (entry->flags & IN_128B_ALLOCATOR_FLAG) {
+    else if (FLAGS_OF_ENTRY(entry) & IN_128B_ALLOCATOR_FLAG) {
         ret = g_128b_allocator.Reallocate(entry, size);
     }
     else {
@@ -1466,12 +1531,16 @@ static void InternalCollectLocked()
 
     g_mark = (g_mark == MARK_A) ? MARK_B : MARK_A;
 
-    // Mark from stacks
+    // Mark from stacks and registers
     int count = GCThreading_GetThreadCount();
     GCThreading_ThreadInfo *gci;
     for (int i = 0; i < count; i++) {
         GCThreading_GetThreadInfo(i, gci);
+        // Stacks
         MarkPointers(gci->bottom, gci->top);
+        // Registers
+        char *jmp = (char *) (gci->jmpbuf);
+        MarkPointers(jmp, jmp + sizeof(gci->jmpbuf));
     }
 
     PLOG(PLOG_TYPE_STX_GC_MARK_STACKS_END, 0, 0);
@@ -1500,7 +1569,7 @@ static void InternalCollectLocked()
         g_weak_hash_list.begin();
     while (iter != g_weak_hash_list.end()) {
         Entry *entry = ENTRY_FROM_PTR(*iter);
-        if ((entry->flags & LAST_MARK_MASK) == g_mark) {
+        if ((FLAGS_OF_ENTRY(entry) & LAST_MARK_MASK) == g_mark) {
             hx::HashBase<Dynamic> *ref = *iter++;
             ref->updateAfterGc();
         }
@@ -1542,15 +1611,16 @@ static void InternalCollectLocked()
 
             // If the entry is marked properly, then it's still live, so do
             // nothing to it
-            if ((entry->entry.flags & LAST_MARK_MASK) == g_mark) {
+            if ((FLAGS_OF_ENTRY(&(entry->entry)) & LAST_MARK_MASK) == g_mark) {
                 entry = next_entry;
                 continue;
             }
 
             // The entry is now dead, collect it
 
-            if (entry->entry.flags & (HAS_FINALIZER_FLAG | IS_WEAK_REF_FLAG)) {
-                if (entry->entry.flags & HAS_FINALIZER_FLAG) {
+            if (FLAGS_OF_ENTRY(&(entry->entry)) &
+                (HAS_FINALIZER_FLAG | IS_WEAK_REF_FLAG)) {
+                if (FLAGS_OF_ENTRY(&(entry->entry)) & HAS_FINALIZER_FLAG) {
                     RunFinalizerLocked((hx::Object *) (entry->entry.bytes));
                 }
                 // If it's a weak reference object itself, then remove it
@@ -1646,8 +1716,11 @@ int __hxcpp_obj_id(Dynamic inObj)
     // require plumbing 64 bit values up through to Haxe ...
 
     GCThreading_Lock();
-
+#ifdef USE_STD_MAP
+    std::map<uintptr_t, int>::iterator i = gObjMap.find(ptr);
+#else
     std::tr1::unordered_map<uintptr_t, int>::iterator i = gObjMap.find(ptr);
+#endif
 
     if (i != gObjMap.end()) {
         GCThreading_Unlock();
@@ -1674,7 +1747,11 @@ hx::Object *__hxcpp_id_obj(int id)
 
     GCThreading_Lock();
     
+#ifdef USE_STD_MAP
+    std::map<int, uintptr_t>::iterator i = gIdMap.find(id);
+#else
     std::tr1::unordered_map<int, uintptr_t>::iterator i = gIdMap.find(id);
+#endif
 
     hx::Object *ret = (i == gIdMap.end()) ? 0 : (hx::Object *) (i->second);
 
@@ -1736,7 +1813,8 @@ void hx::MarkAlloc(void *ptr, hx::MarkContext *)
     }
 #endif
 
-    entry->flags = ((entry->flags & ~LAST_MARK_MASK) | g_mark);
+    FLAGS_OF_ENTRY(entry) =
+        ((FLAGS_OF_ENTRY(entry) & ~LAST_MARK_MASK) | g_mark);
 }
 
 
@@ -1745,12 +1823,13 @@ void hx::MarkObjectAlloc(hx::Object *obj, hx::MarkContext *)
     // If the object has been marked and its last mark matches the global
     // mark, then nothing to do
     Entry *entry = ENTRY_FROM_PTR(obj);
-    if ((entry->flags & LAST_MARK_MASK) == g_mark) {
+    if ((FLAGS_OF_ENTRY(entry) & LAST_MARK_MASK) == g_mark) {
         return;
     }
 
     // Set the object as being marked and with the current mark
-    entry->flags = ((entry->flags & ~LAST_MARK_MASK) | g_mark);
+    FLAGS_OF_ENTRY(entry) =
+        ((FLAGS_OF_ENTRY(entry) & ~LAST_MARK_MASK) | g_mark);
 
     // Recursively mark its contained objects
     obj->__Mark(0);
@@ -1795,12 +1874,7 @@ void hx::UnregisterCurrentThread()
 // a program uses multiple threads
 void hx::GCPrepareMultiThreaded()
 {
-    static bool main_thread_called = false;
-    if (!main_thread_called) {
-        main_thread_called = true;
-        GCThreading_ThreadAboutToBeCreated();
-    }
-    GCThreading_ThreadAboutToBeCreated();
+    GCThreading_PrepareMultiThreaded();
 }
 
 

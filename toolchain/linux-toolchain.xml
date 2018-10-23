@@ -30,7 +30,6 @@
 <set name="noM32" value="1" if="HXCPP_NO_M32" />
 <set name="noM32" value="1" if="HXCPP_M64" />
 <set name="noM32" value="1" if="rpi" />
-<set name="sharedObject" value="1" if="dynamic_link"/>
 
 <compiler id="linux" exe="g++" if="linux">
   <exe name="${CXX}" if="CXX" />
@@ -39,8 +38,8 @@
   <cppflag value="-frtti"/>
   <flag value="-g" if="debug"/>
   <flag value="-Os" unless="debug"/>
-  <flag value="-fpic" if="sharedObject"/>
-  <flag value="-fPIC" if="sharedObject"/>
+  <flag value="-fpic" if="dynamic_link"/>
+  <flag value="-fPIC" if="dynamic_link"/>
   <cppflag value="-Wno-invalid-offsetof" />
   <flag value="-DDEBUG" if="debug tivo" />
   <flag value="-DHX_LINUX"/>

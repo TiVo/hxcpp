@@ -27,7 +27,13 @@ extern "C" EXPORT_EXTRA void AppLogInternal(const char* pFunction, int lineNumbe
 #endif
 #include <string>
 #include <vector>
+
+#ifdef USE_STD_MAP
+#include <map>
+#else
 #include <tr1/unordered_map>
+#endif
+
 #include <time.h>
 
 
@@ -501,8 +507,11 @@ Dynamic __hxcpp_create_var_args(Dynamic &inArrayFunc)
 
 
 
-
+#ifdef USE_STD_MAP
+typedef std::map<std::string,int> StringToField;
+#else
 typedef std::tr1::unordered_map<std::string,int> StringToField;
+#endif
 
 // These need to be pointers because of the unknown order of static object construction.
 String *sgFieldToString=0;

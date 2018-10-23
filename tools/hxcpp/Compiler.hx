@@ -193,15 +193,25 @@ class Compiler
          {
             command = mExe + " --version";
             versionString = ProcessManager.readStdout(mExe,["--version"]).join(" ");
+            if (versionString == "" || versionString == null)
+            {
+                versionString = ProcessManager.readStderr(mExe,["--version"]).join(" ");
+            }
          }
          else
          {
             command = mGetCompilerVersion;
             versionString = ProcessManager.readStdout(mGetCompilerVersion,[]).join(" ");
+            if (versionString == "" || versionString == null)
+            {
+                versionString = ProcessManager.readStderr(mGetCompilerVersion,[]).join(" ");
+            }
          }
 
          if (versionString=="" || versionString==null)
-            Log.error("Could not deduce compiler version with " + command);
+         {
+             Log.error("Could not deduce compiler version with " + command);
+         }
 
          Log.info("", "Compiler version: " +  versionString);
 

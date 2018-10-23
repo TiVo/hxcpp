@@ -8,8 +8,6 @@
 <set name="compiler_arch" value="arm" if="tivo-arm" />
 <set name="compiler_abi" value="eabi" if="tivo-arm" />
 
-<!-- Workaround for apparent toolchain bug, need to set fPIC for ARM builds -->
-<set name="sharedObject" value="1" if="dynamic_link || tivo-arm"/>
 <set name="mipsOrDebug" value="1" if="tivo-mips || debug"/>
 
 <!-- anymips is set for any mips flavor -->
@@ -23,9 +21,11 @@
 <compiler id="tivo" exe="invalid" if="tivo">
   <exe name="${TOOLROOT}/bin/${compiler_arch}-TiVo-linux-gnu${compiler_abi}-g++" />
   <flag value="-fno-inline" if="tivo-x86" />
-  <flag value="-O0" if="debug" />
+  <flag value="-O0" if="debug" unless="bug_437316" />
+  <flag value="-Os" if="bug_437316" />
   <flag value="-Os" unless="debug"/>
   <flag value="-fno-strict-aliasing" unless="debug" />
+  <flag value="-fno-strict-aliasing" if="bug_437316" />
   <!-- Commented out for now in an attempt to work around this compiler error:
        internal compiler error: in dwarf2out_finish, at dwarf2out.c:14292 -->
   <!-- <flag value="-g" /> --> <!-- tivo always does -g and strips later -->
@@ -35,10 +35,12 @@
   <flag value="-mbranch-likely" if="anymips" />
   <flag value="-Wa,--trap" if="anymips" />
   <flag value="-fdata-sections" unless="mipsOrDebug"/>
+  <flag value="-fdata-sections" if="bug_437316" />
   <flag value="-ffunction-sections" unless="mipsOrDebug"/>
+  <flag value="-ffunction-sections" if="bug_437316" />
   <flag value="-march=armv7-a" if="tivo-arm" />
-  <flag value="-fpic" if="sharedObject"/>
-  <flag value="-fPIC" if="sharedObject"/>
+  <flag value="-fpic" if="dynamic_link" />
+  <flag value="-fPIC" if="dynamic_link" />
   <flag value="-pipe" />
   <flag value="-DDEBUG" if="debug" />
   <flag value="-DBOOTARCH=MIPS" if="anymips" />
@@ -118,6 +120,7 @@
   <flag value="-Wl,--export-dynamic"/> <!-- same as -rdynamic? -->
   <flag value="-Wl,--gc-sections" unless="debug"/>
   <flag value="-Wl,--no-keep-memory"/>
+  <flag value="-Wl,--reduce-memory-overheads"/>
   <flag value="-L${ISM_OBJDIR}" />
   <flag value="-L${ISM_OBJDIR}/plugins" />
   <flag value="-L${ROOT}/lib" />

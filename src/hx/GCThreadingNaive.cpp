@@ -25,8 +25,9 @@
 // other than the thread doing the GC to capture their stack and wait until
 // the GC is done, ala the Boehm GC.
 
-// This is the lock that protects all global GC data
+// This is the lock that protects all global GC data from GCPooled.cpp
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
+// This is the lock that protects all global GC data from this file
 static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t g_stop_cond = PTHREAD_COND_INITIALIZER;
 static pthread_cond_t g_resume_cond = PTHREAD_COND_INITIALIZER;
@@ -34,6 +35,7 @@ static pthread_key_t g_info_key;
 static pthread_once_t g_info_key_once = PTHREAD_ONCE_INIT;
 static volatile bool g_gc_in_progress;
 static volatile int g_thread_count;
+static volatile int g_is_multithreaded;
 static int g_thread_stopped_count;
 static std::vector<GCThreading_ThreadInfo *> g_thread_infos;
 
@@ -63,59 +65,43 @@ static inline bool IsGCInProgress()
 }
 
 
-// This function plays dirty games with cache coherency, and is represented
-// here as inline functions just so that this can be fully documented
-static inline bool IsMultiThreaded()
-{
-    // Because this value could be set or cleared by a thread other than the
-    // calling thread, the bare access here could give the wrong result.  The
-    // only way in which this thread could see the wrong value here is if
-    // this thread sees g_thread_count as > 1, when in fact some other thread
-    // has just exited and g_thread_count has been decremented to 1 but this
-    // thread hasn't seen that yet.  In that case, the caller will be told
-    // that we're currently running multi threaded when in fact we are not.
-    // But in all cases where IsMultiThreaded() is called, the caller will
-    // function correctly even if the wrong answer is given.
-    // It's not possible for g_thread_count to be set to some value greater
-    // than 1 but this thread to see 1, because the only way for another
-    // thread to exist is if the calling thread created a thread.
-    return (g_thread_count > 1);
-}
-
-
 static void make_key()
 {
     pthread_key_create(&g_info_key, NULL);
 }
 
 
-static void InitializeThreadInfo(void *top_of_stack)
+static void InitializeThreadInfoLocked(void *top_of_stack)
 {
     pthread_once(&g_info_key_once, make_key);
     GCThreading_ThreadInfo *si =
         (GCThreading_ThreadInfo *) malloc(sizeof(GCThreading_ThreadInfo));
     si->top = top_of_stack;
     si->bottom = 0;
+    memset(si->jmpbuf, 0, sizeof(si->jmpbuf));
     g_thread_infos.push_back(si);
     pthread_setspecific(g_info_key, (void *) si);
+    g_thread_count += 1;
 }
 
 
 // Use setjmp to save state to stack.  It is assumed that setjmp saves all
 // pointers into the jmp_buf in an unmangled form, such that the mark will
 // find any pointers to garbage collected allocated entries that were stored
-// in registers on entry to InternalCollect in the jmp_buf on the stack.
-static void UpdateThreadInfo()
+// in registers on entry to InternalCollect in the jmpbuf field if the
+// calling thread's TLS data.
+static void UpdateThreadInfoLocked()
 {
-    // Use setjmp to save registers onto stack
-    jmp_buf jmpbuf;
-    (void) setjmp(jmpbuf);
-    ((GCThreading_ThreadInfo *) pthread_getspecific(g_info_key))->bottom = 
-        &jmpbuf;
+    void *bottom;
+    ((GCThreading_ThreadInfo *) pthread_getspecific(g_info_key))->bottom =
+        &bottom;
+    // Use setjmp to (hopefully) save registers
+    (void) setjmp(((GCThreading_ThreadInfo *)
+                   pthread_getspecific(g_info_key))->jmpbuf);
 }
     
 
-static void DeleteThreadInfo()
+static void DeleteThreadInfoLocked()
 {
     GCThreading_ThreadInfo *gi =
         (GCThreading_ThreadInfo *) pthread_getspecific(g_info_key);
@@ -135,7 +121,7 @@ static void DeleteThreadInfo()
 static void WaitUntilGCDoneLocked()
 {
     g_thread_stopped_count += 1;
-    UpdateThreadInfo();
+    UpdateThreadInfoLocked();
     pthread_cond_signal(&g_stop_cond);
     do {
         pthread_cond_wait(&g_resume_cond, &g_mutex);
@@ -146,7 +132,7 @@ static void WaitUntilGCDoneLocked()
 
 void GCThreading_Lock()
 {
-    if (IsMultiThreaded()) {
+    if (g_is_multithreaded) {
         pthread_mutex_lock(&g_lock);
     }
 }
@@ -154,16 +140,16 @@ void GCThreading_Lock()
 
 void GCThreading_Unlock()
 {
-    if (IsMultiThreaded()) {
+    if (g_is_multithreaded) {
         pthread_mutex_unlock(&g_lock);
     }
 }
 
 
-void GCThreading_ThreadAboutToBeCreated()
+void GCThreading_PrepareMultiThreaded()
 {
     pthread_mutex_lock(&g_mutex);
-    g_thread_count += 1;
+    g_is_multithreaded = true;
     pthread_mutex_unlock(&g_mutex);
 }
 
@@ -171,7 +157,7 @@ void GCThreading_ThreadAboutToBeCreated()
 void GCThreading_InitializeGCForThisThread(void *top_of_stack)
 {
     pthread_mutex_lock(&g_mutex);
-    InitializeThreadInfo(top_of_stack);
+    InitializeThreadInfoLocked(top_of_stack);
     pthread_mutex_unlock(&g_mutex);
 }
 
@@ -180,7 +166,7 @@ void GCThreading_DeinitializeGCForThisThread()
 {
     pthread_mutex_lock(&g_mutex);
     g_thread_count -= 1;
-    DeleteThreadInfo();
+    DeleteThreadInfoLocked();
     pthread_cond_signal(&g_stop_cond);
     pthread_mutex_unlock(&g_mutex);
 }
@@ -188,9 +174,11 @@ void GCThreading_DeinitializeGCForThisThread()
 
 void GCThreading_CheckForGCMark()
 {
-    if (IsGCInProgress()) {
+    if (g_is_multithreaded) {
         pthread_mutex_lock(&g_mutex);
-        WaitUntilGCDoneLocked();
+        if (IsGCInProgress()) {
+            WaitUntilGCDoneLocked();
+        }
         pthread_mutex_unlock(&g_mutex);
     }
 }
@@ -198,10 +186,14 @@ void GCThreading_CheckForGCMark()
 
 void GCThreading_EnterMarkSafe()
 {
-    if (IsMultiThreaded()) {
+    if (g_is_multithreaded) {
         pthread_mutex_lock(&g_mutex);
         g_thread_stopped_count += 1;
-        UpdateThreadInfo();
+        UpdateThreadInfoLocked();
+        // So everything on the stack up to this point and in registers got
+        // saved ... presumably no code in between EnterMarkSafe and
+        // LeaveMarkSafe would do anything that could affect GC, so it doesn't
+        // matter what ends up in the stack or registers after this.
         pthread_cond_signal(&g_stop_cond);
         pthread_mutex_unlock(&g_mutex);
     }
@@ -210,7 +202,7 @@ void GCThreading_EnterMarkSafe()
 
 void GCThreading_LeaveMarkSafe()
 {
-    if (IsMultiThreaded()) {
+    if (g_is_multithreaded) {
         pthread_mutex_lock(&g_mutex);
         while (g_gc_in_progress) {
             pthread_cond_wait(&g_resume_cond, &g_mutex);
@@ -223,13 +215,13 @@ void GCThreading_LeaveMarkSafe()
 
 void GCThreading_BeginGCMark()
 {
-    if (IsMultiThreaded()) {
+    if (g_is_multithreaded) {
         pthread_mutex_lock(&g_mutex);
         if (g_gc_in_progress) {
             WaitUntilGCDoneLocked();
         }
         else {
-            UpdateThreadInfo();
+            UpdateThreadInfoLocked();
         }
         g_gc_in_progress = true;
         while (g_thread_stopped_count != (g_thread_count - 1)) {
@@ -237,7 +229,7 @@ void GCThreading_BeginGCMark()
         }
     }
     else {
-        UpdateThreadInfo();
+        UpdateThreadInfoLocked();
         g_gc_in_progress = true;
     }
 }
@@ -258,7 +250,7 @@ void GCThreading_GetThreadInfo(int index, GCThreading_ThreadInfo *&threadInfo)
 void GCThreading_EndGCMark()
 {
     g_gc_in_progress = false;
-    if (IsMultiThreaded()) {
+    if (g_is_multithreaded) {
         pthread_cond_broadcast(&g_resume_cond);
         pthread_mutex_unlock(&g_mutex);
     }

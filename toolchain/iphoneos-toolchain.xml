@@ -52,6 +52,7 @@
   <flag value="-fno-stack-protector"/>
   <flag value="-DIPHONE=IPHONE"/>
   <flag value="-DIPHONEOS=IPHONEOS"/>
+  <flag value="-DUSE_STD_MAP=USE_STD_MAP"/>
   <include name="toolchain/common-defines.xml" />
   <flag value="-DHXCPP_BIG_ENDIAN" if="HXCPP_BIG_ENDIAN"/>
   <flag value="-I${HXCPP}/include"/>

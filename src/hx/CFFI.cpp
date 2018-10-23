@@ -6,7 +6,11 @@
 #define IGNORE_CFFI_API_H
 
 #include <hx/CFFI.h>
+#ifdef USE_STD_MAP
+#include <map>
+#else
 #include <tr1/unordered_map>
+#endif
 #include <string>
 
 
@@ -111,8 +115,18 @@ vkind k_cpp_struct = (vkind)(vtAbstractBase + 3);
 vkind k_cpp_objc = (vkind)(vtAbstractBase + 4);
 static int sgKinds = (int)(vtAbstractBase + 5);
 
+#ifdef USE_STD_MAP
+
+typedef std::map<std::string,int> KindMap;
+typedef std::map<int,std::string> ReverseKindMap;
+
+#else
+
 typedef std::tr1::unordered_map<std::string,int> KindMap;
 typedef std::tr1::unordered_map<int,std::string> ReverseKindMap;
+
+#endif
+
 static KindMap sgKindMap;
 static ReverseKindMap sgReverseKindMap;
 

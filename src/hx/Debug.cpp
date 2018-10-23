@@ -1,6 +1,12 @@
 #include <hxcpp.h>
 #include <list>
+
+#ifdef USE_STD_MAP
+#include <map>
+#else
 #include <tr1/unordered_map>
+#endif
+
 #include <vector>
 #include <string>
 #include <hx/Debug.h>
@@ -187,8 +193,13 @@ public:
         results.reserve(mProfileStats.size());
 
         int total = 0;
+#ifdef USE_STD_MAP
+        std::map<const char *, ProfileEntry>::iterator iter =
+            mProfileStats.begin();
+#else
         std::tr1::unordered_map<const char *, ProfileEntry>::iterator iter =
             mProfileStats.begin();
+#endif
         while (iter != mProfileStats.end()) {
             ProfileEntry &pe = iter->second;
             ResultsEntry re;
@@ -199,8 +210,13 @@ public:
             ChildEntry internal;
             internal.fullName = "(internal)";
             internal.self = re.self;
+#ifdef USE_STD_MAP
+            std::map<const char *, int>::iterator childIter =
+                pe.children.begin();
+#else
             std::tr1::unordered_map<const char *, int>::iterator childIter =
                 pe.children.begin();
+#endif
             int childTotal = 0;
             while (childIter != pe.children.end()) {
                 ChildEntry ce;
@@ -262,7 +278,11 @@ struct ProfileEntry
         }
 
         int self;
+#ifdef USE_STD_MAP
+        std::map<const char *, int> children;
+#else
         std::tr1::unordered_map<const char *, int> children;
+#endif
         int total;
 };
 
@@ -320,7 +340,11 @@ struct ProfileEntry
 
     String mDumpFile;
     int mT0;
+#ifdef USE_STD_MAP
+    std::map<const char *, ProfileEntry> mProfileStats;
+#else
     std::tr1::unordered_map<const char *, ProfileEntry> mProfileStats;
+#endif
 
     static MyMutex gThreadMutex;
     static int gThreadRefCount;
@@ -348,7 +372,11 @@ struct ProfileEntry
   struct AllocStackIdMapEntry
   {
     int terminationStackId;
+#ifdef USE_STD_MAP
+    std::map<int, AllocStackIdMapEntry*> children;
+#else
     std::tr1::unordered_map<int, AllocStackIdMapEntry*> children;
+#endif
   };
 
 
@@ -512,7 +540,11 @@ public:
 
       int obj_id = __hxt_ptr_id(_last_obj);
       alloc_mutex.Lock();
+#ifdef USE_STD_MAP
+      std::map<int, hx::Telemetry*>::iterator exist = alloc_map.find(obj_id);
+#else
       std::tr1::unordered_map<int, hx::Telemetry*>::iterator exist = alloc_map.find(obj_id);
+#endif
       if (exist != alloc_map.end() && _last_obj!=(NULL)) {
         type = "_unknown";
         int vtt = _last_obj->__GetType();
@@ -552,7 +584,11 @@ public:
     static void HXTReclaimInternal(void* obj)
     {
       int obj_id = __hxt_ptr_id(obj);
+#ifdef USE_STD_MAP
+      std::map<int, hx::Telemetry*>::iterator exist = alloc_map.find(obj_id);
+#else
       std::tr1::unordered_map<int, hx::Telemetry*>::iterator exist = alloc_map.find(obj_id);
+#endif
       if (exist != alloc_map.end()) {
         Telemetry* telemetry = exist->second;
         if (telemetry) {
@@ -604,7 +640,11 @@ private:
 
     std::list<TelemetryFrame> stashed;
 
+#ifdef USE_STD_MAP
+    std::map<const char *, int> nameMap;
+#else
     std::tr1::unordered_map<const char *, int> nameMap;
+#endif
     std::vector<const char *> names;
     std::vector<int> *samples;
     int namesStashed;
@@ -633,14 +673,22 @@ private:
     static int gProfileClock;
 
     static MyMutex alloc_mutex;
+#ifdef USE_STD_MAP
+    static std::map<int, Telemetry*> alloc_map;
+#else
     static std::tr1::unordered_map<int, Telemetry*> alloc_map;
+#endif
 };
 /* static */ MyMutex Telemetry::gStashMutex;
 /* static */ MyMutex Telemetry::gThreadMutex;
 /* static */ int Telemetry::gThreadRefCount;
 /* static */ int Telemetry::gProfileClock;
 /* static */ MyMutex Telemetry::alloc_mutex;
+#ifdef USE_STD_MAP
+/* static */ std::map<int, Telemetry*> Telemetry::alloc_map;
+#else
 /* static */ std::tr1::unordered_map<int, Telemetry*> Telemetry::alloc_map;
+#endif
 
 #endif // HXCPP_TELEMETRY
 
@@ -1454,11 +1502,19 @@ private:
 
     // gMutex protects gMap and gList
     static MyMutex gMutex;
+#ifdef USE_STD_MAP
+    static std::map<int, CallStack *> gMap;
+#else
     static std::tr1::unordered_map<int, CallStack *> gMap;
+#endif
     static std::list<CallStack *> gList;
 };
 /* static */ MyMutex CallStack::gMutex;
+#ifdef USE_STD_MAP
+/* static */ std::map<int, CallStack *> CallStack::gMap;
+#else
 /* static */ std::tr1::unordered_map<int, CallStack *> CallStack::gMap;
+#endif
 /* static */ std::list<CallStack *> CallStack::gList;
 
 #ifdef HXCPP_DEBUGGER
@@ -2344,7 +2400,11 @@ void hx::Profiler::Sample(hx::CallStack *stack)
 
     int depth = stack->GetDepth();
 
+#ifdef USE_STD_MAP
+    std::map<const char *, bool> alreadySeen;
+#else
     std::tr1::unordered_map<const char *, bool> alreadySeen;
+#endif
 
     // Add children time in to each stack element
     for (int i = 0; i < (depth - 1); i++) {
@@ -2399,7 +2459,11 @@ int hx::Telemetry::ComputeCallStackId(hx::CallStack *stack) {
     while (i<size) {
         int name_id = callstack.at(i++);
         //printf("Finding child with id=%d, asime now %#010x\n", name_id, asime);
+#ifdef USE_STD_MAP
+        std::map<int, AllocStackIdMapEntry*>::iterator lb = asime->children.lower_bound(name_id);
+#else
         std::tr1::unordered_map<int, AllocStackIdMapEntry*>::iterator lb = asime->children.lower_bound(name_id);
+#endif
          
         if (lb != asime->children.end() && !(asime->children.key_comp()(name_id, lb->first)))
         {   // key already exists
@@ -2408,7 +2472,11 @@ int hx::Telemetry::ComputeCallStackId(hx::CallStack *stack) {
             // the key does not exist in the map, add it
             AllocStackIdMapEntry *newEntry = new AllocStackIdMapEntry();
             newEntry->terminationStackId = -1;
+#ifdef USE_STD_MAP
+            asime->children.insert(lb, std::map<int, AllocStackIdMapEntry*>::value_type(name_id, newEntry));
+#else
             asime->children.insert(lb, std::tr1::unordered_map<int, AllocStackIdMapEntry*>::value_type(name_id, newEntry));
+#endif
             asime = newEntry;
         }
     }
@@ -2473,7 +2541,11 @@ void hx::Telemetry::HXTAllocation(CallStack *stack, void* obj, size_t inSize, co
 
     // HXT debug: Check for id collision
 #ifdef HXCPP_TELEMETRY_DEBUG
+#ifdef USE_STD_MAP
+    std::map<int, hx::Telemetry*>::iterator exist = alloc_map.find(obj_id);
+#else
     std::tr1::unordered_map<int, hx::Telemetry*>::iterator exist = alloc_map.find(obj_id);
+#endif
     if (exist != alloc_map.end()) {
       printf("HXT ERR: Object id collision! at on %016lx, id=%016lx\n", obj, obj_id);
       throw "uh oh";
@@ -2515,7 +2587,11 @@ void hx::Telemetry::HXTRealloc(void* old_obj, void* new_obj, int new_size)
     alloc_mutex.Lock();
 
     // Only track reallocations of objects currently known to be allocated
+#ifdef USE_STD_MAP
+    std::map<int, hx::Telemetry*>::iterator exist = alloc_map.find(old_obj_id);
+#else
     std::tr1::unordered_map<int, hx::Telemetry*>::iterator exist = alloc_map.find(old_obj_id);
+#endif
     if (exist != alloc_map.end()) {
       Telemetry* t = exist->second;
       t->allocation_data->push_back(2); // realloc flag (necessary?)
@@ -2527,7 +2603,11 @@ void hx::Telemetry::HXTRealloc(void* old_obj, void* new_obj, int new_size)
 
       // HXT debug: Check for id collision
 #ifdef HXCPP_TELEMETRY_DEBUG
+#ifdef USE_STD_MAP
+      std::map<int, hx::Telemetry*>::iterator exist_new = alloc_map.find(new_obj_id);
+#else
       std::tr1::unordered_map<int, hx::Telemetry*>::iterator exist_new = alloc_map.find(new_obj_id);
+#endif
       if (exist_new != alloc_map.end()) {
         printf("HXT ERR: Object id collision (reloc)! at on %016lx, id=%016lx\n", (unsigned long)new_obj, (unsigned long)new_obj_id);
         throw "uh oh";

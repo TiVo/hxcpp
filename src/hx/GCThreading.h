@@ -9,6 +9,7 @@ typedef struct GCThreading_ThreadInfo
 {
     void *top; // Stack starts here and grows downwards
     void *bottom; // Stack stops here
+    jmp_buf jmpbuf; // Saves registers
 } GCThread_ThreadInfo;
 
 // Acquire a lock suitable for preventing multithreaded access to GC
@@ -18,8 +19,8 @@ void GCThreading_Lock();
 // Release the GC threading lock.
 void GCThreading_Unlock();
 
-// Called when a new thread is about to be created
-void GCThreading_ThreadAboutToBeCreated();
+// Prepares for multithreaded operation
+void GCThreading_PrepareMultiThreaded();
 
 // Every thread must call this function shortly after creation, before it ever
 // touches any heap values.
