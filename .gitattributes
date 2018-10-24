@@ -1,7 +1,0 @@
-# Normalize all line endings for text files to LF in the repository.
-# git will checkout files in the native (CRLF windows, LF others) mode and
-# convert on add.
-# 
-# you can unset this per-file with a 'file-pattern -text' directive below.
-#
-* text=auto
