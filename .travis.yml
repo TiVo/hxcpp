@@ -13,26 +13,26 @@ matrix:
       env:
         - ARCH=32
       install:
-        - bash tools/haxe/build_linux.sh https://github.com/HaxeFoundation/haxe.git development
+        - bash tools/haxe/build_linux.sh https://github.com/HaxeFoundation/haxe.git 3.3.0-rc1
         - travis_retry sudo apt-get install gcc-multilib g++-multilib gdb -y;
     - os: linux
       dist: trusty
       env:
         - ARCH=64
       install:
-        - bash tools/haxe/build_linux.sh https://github.com/HaxeFoundation/haxe.git development;
+        - bash tools/haxe/build_linux.sh https://github.com/HaxeFoundation/haxe.git 3.3.0-rc1;
     - os: osx
       osx_image: xcode9.4
       env:
         - ARCH=32
       install:
-        - bash tools/haxe/build_osx.sh https://github.com/HaxeFoundation/haxe.git development;
+        - bash tools/haxe/build_osx.sh https://github.com/HaxeFoundation/haxe.git 3.3.0-rc1;
     - os: osx
       osx_image: xcode9.4
       env:
         - ARCH=64
       install:
-        - bash tools/haxe/build_osx.sh https://github.com/HaxeFoundation/haxe.git development;
+        - bash tools/haxe/build_osx.sh https://github.com/HaxeFoundation/haxe.git 3.3.0-rc1;
 
 before_script:
 - ulimit -c unlimited -S       # enable core dumps
