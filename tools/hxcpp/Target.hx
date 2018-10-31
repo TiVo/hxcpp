@@ -12,7 +12,9 @@ class Target
    public var mFileGroups:Array<FileGroup>;
    public var mDepends:Array<String>;
    public var mSubTargets:Array<String>;
+   public var mAutoLibs:Array<String>;
    public var mLibs:Array<String>;
+   public var mLibPaths:Array<String>;
    public var mFlags:Array<String>;
    public var mErrors:Array<String>;
    public var mDirs:Array<String>;
@@ -26,7 +28,9 @@ class Target
       mTool = inTool;
       mFiles = [];
       mDepends = [];
+      mAutoLibs = [];
       mLibs = [];
+      mLibPaths = [];
       mFlags = [];
       mExt = null;
       mSubTargets = [];
@@ -42,6 +46,8 @@ class Target
       mFileGroups = mFileGroups.concat(other.mFileGroups);
       mDepends = mDepends.concat(other.mDepends);
       mSubTargets = mSubTargets.concat(other.mSubTargets);
+      mLibPaths = mLibPaths.concat(other.mLibPaths);
+      mAutoLibs = mAutoLibs.concat(other.mAutoLibs);
       mLibs = mLibs.concat(other.mLibs);
       mFlags = mFlags.concat(other.mFlags);
       mErrors = mErrors.concat(other.mErrors);
@@ -67,7 +73,7 @@ class Target
 
    public function addFiles(inGroup:FileGroup, inAsLibrary:Bool)
    {
-      inGroup.mAsLibrary=inAsLibrary;
+      inGroup.mAsLibrary = inGroup.mAsLibrary || inAsLibrary;
       mFiles = mFiles.concat(inGroup.mFiles);
       mFileGroups.push(inGroup);
    }

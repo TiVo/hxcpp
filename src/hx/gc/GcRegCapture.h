@@ -10,7 +10,7 @@ namespace hx
 #define HXCPP_CAPTURE_x86
 #endif
 
-#if (defined(HX_MACOS) || defined(HX_WINDOWS)) && defined(HXCPP_M64)
+#if (defined(HX_MACOS) || (defined(HX_WINDOWS) && !defined(HX_WINRT)) || defined(_XBOX_ONE)) && defined(HXCPP_M64)
 #define HXCPP_CAPTURE_x64
 #endif
 
@@ -44,6 +44,8 @@ struct RegisterCaptureBuffer
    void *r13;
    void *r14;
    void *r15;
+
+   void *xmm[16*2];
 };
 
 void CaptureX64(RegisterCaptureBuffer &outBuffer);

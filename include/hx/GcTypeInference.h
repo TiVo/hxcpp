@@ -27,6 +27,19 @@ template<> inline void MarkMember<hx::Object *>(hx::Object *&outT,hx::MarkContex
 {
    HX_MARK_OBJECT(outT);
 }
+template<> inline void MarkMember<cpp::Variant>(cpp::Variant &outT,hx::MarkContext *__inCtx)
+{
+   outT.mark(__inCtx);
+}
+template<typename T> inline void MarkMember(hx::Native<T> &outT,hx::MarkContext *__inCtx)
+{
+   if (outT.ptr)
+   {
+      hx::Object *ptr = outT.ptr->__GetRealObject();
+      HX_MARK_OBJECT(ptr);
+   }
+}
+
 template<> inline void MarkMember<int>(int &outT,hx::MarkContext *__inCtx) {  }
 template<> inline void MarkMember<bool>(bool &outT,hx::MarkContext *__inCtx) {  }
 template<> inline void MarkMember<double>(double &outT,hx::MarkContext *__inCtx) {  }
@@ -35,7 +48,7 @@ template<> inline void MarkMember<String>(String &outT,hx::MarkContext *__inCtx)
 {
    HX_MARK_STRING(outT.__s);
 }
-template<> inline void MarkMember<Void>(Void &outT,hx::MarkContext *__inCtx) {  }
+template<> inline void MarkMember<null>(null &outT,hx::MarkContext *__inCtx) {  }
 
 
 
@@ -87,6 +100,27 @@ template<typename T> inline void VisitMember(Array<T> &outT,hx::VisitContext *__
 {
    HX_VISIT_OBJECT(outT.mPtr);
 }
+template<> inline void VisitMember(cpp::Variant &outT,hx::VisitContext *__inCtx)
+{
+   outT.visit(__inCtx);
+}
+template<typename T> inline void VisitMember(hx::Native<T> &outT,hx::VisitContext *__inCtx)
+{
+   if (outT.ptr)
+   {
+      hx::Object *ptr0 = outT.ptr->__GetRealObject();
+      if (ptr0)
+      {
+         hx::Object *ptr1 = ptr0;
+         HX_VISIT_OBJECT(ptr1);
+         size_t delta = ( (char *)ptr1 - (char *)ptr0 );
+         if (delta)
+            outT.ptr = (T)( (char *)outT.ptr + delta );
+      }
+   }
+}
+
+
 template<> inline void VisitMember<int>(int &outT,hx::VisitContext *__inCtx) {  }
 template<> inline void VisitMember<bool>(bool &outT,hx::VisitContext *__inCtx) {  }
 template<> inline void VisitMember<double>(double &outT,hx::VisitContext *__inCtx) {  }
@@ -95,7 +129,7 @@ template<> inline void VisitMember<String>(String &outT,hx::VisitContext *__inCt
 {
    HX_VISIT_STRING(outT.__s);
 }
-template<> inline void VisitMember<Void>(Void &outT,hx::VisitContext *__inCtx) {  }
+template<> inline void VisitMember<null>(null &outT,hx::VisitContext *__inCtx) {  }
 #endif
 
 

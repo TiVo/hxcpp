@@ -15,7 +15,7 @@ typedef struct _buffer  *buffer;
 #include "OS.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <memory.h>
+#include <string.h>
 #if defined(BLACKBERRY)
 using namespace std;
 #endif
@@ -44,6 +44,15 @@ int __reg_##func = hx_register_prim(lib "_" #func "__MULT",(void *)(&func)); \
 
 #define DEFINE_LIB_PRIM(lib,func,nargs) \
 int __reg_##func = hx_register_prim(lib "_" #func "__" #nargs,(void *)(&func)); \
+
+
+#elif defined(HXCPP_JS_PRIME)
+
+//#define DEFINE_PRIM_MULT(func) EMSCRIPTEN_BINDINGS(func) { function(#func, &func); }
+//TODO
+#define DEFINE_PRIM_MULT(func)
+
+#define DEFINE_PRIM(func,nargs) EMSCRIPTEN_BINDINGS(func) { function(#func, &func); }
 
 
 #else
@@ -126,7 +135,13 @@ typedef int field;
 
 
 #if !defined(HAVE_NEKO_TYPES)
-typedef struct _value *value;
+#ifdef HXCPP_NATIVE_CFFI_VALUE
+namespace hx { class Object; }
+typedef hx::Object _value;
+#else
+struct _value;
+#endif
+typedef _value *value;
 typedef struct _vkind  *vkind;
 typedef struct _buffer  *buffer;
 #endif

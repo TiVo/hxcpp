@@ -30,6 +30,7 @@
   <flag value="-pipe"/>
   <flag value="-Wno-trigraphs"/>
   <flag value="-fno-stack-protector"/>
+  <flag value="-Wno-overflow" />
   <cppflag value="-Wno-invalid-offsetof" />
   <flag value="-fpascal-strings"/>
   <flag value="-fasm-blocks"/>
@@ -39,8 +40,7 @@
   <mmflag value="-fobjc-legacy-dispatch"/>
   <flag value="-Wno-unused-variable"/>
   <flag value="-arch"/>
-  <flag value="i386" unless="HXCPP_M64"/>
-  <flag value="x86_64" if="HXCPP_M64"/>
+  <flag value="x86_64" />
   <flag value="-isysroot"/>
   <flag value="${DEVELOPER_DIR}/Platforms/AppleTVSimulator.platform/Developer/SDKs/AppleTVSimulator${TVOS_VER}.sdk"/>
   <!-- Removed for iOS 8 -->

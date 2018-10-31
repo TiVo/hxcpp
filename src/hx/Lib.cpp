@@ -17,8 +17,15 @@
 #include <unistd.h>
 #endif
 
+#if (defined (IPHONE) || defined(EMSCRIPTEN) || defined(STATIC_LINK) || defined(APPLETV) ) && \
+	!defined(HXCPP_DLL_IMPORT) && (!defined(HXCPP_DLL_EXPORT) || defined(HXCPP_SCRIPTABLE) )
+#define HXCPP_NO_DYNAMIC_LOADING
+#elif !defined(ANDROID) && !defined(HX_WINRT) && !defined(IPHONE) && !defined(EMSCRIPTEN) && \
+	!defined(STATIC_LINK) && !defined(APPLETV)
+#define HXCPP_TRY_HAXELIB
+#endif
 
-#if !defined(HX_WINRT) && !defined(EPPC)
+#ifdef HXCPP_TRY_HAXELIB
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif
@@ -31,15 +38,19 @@ bool gLoadDebug = true;
 bool gLoadDebug = false;
 #endif
 
-#ifdef _WIN32
+#ifdef HXCPP_NO_DYNAMIC_LOADING
+
+typedef void *Module;
+Module hxLoadLibrary(const String &) { return 0; }
+void hxFreeLibrary(Module) { }
+
+#elif defined _WIN32
 
 #include <windows.h>
 typedef HMODULE Module;
 
 #ifdef HX_WINRT
-
 Module hxLoadLibrary(String inLib) { return LoadPackagedLibrary(inLib.__WCStr(),0); }
-
 #else // Windows, not WinRT
 Module hxLoadLibrary(String inLib)
 {
@@ -56,12 +67,6 @@ Module hxLoadLibrary(String inLib)
 void *hxFindSymbol(Module inModule, const char *inSymbol) { return (void *)GetProcAddress(inModule,inSymbol); }
 
 void hxFreeLibrary(Module inModule) { FreeLibrary(inModule); }
-
-#elif (defined (IPHONE) || defined(EMSCRIPTEN) || defined(STATIC_LINK) || defined(APPLETV) ) && !defined(HXCPP_DLL_IMPORT) && (!defined(HXCPP_DLL_EXPORT) || defined(HXCPP_SCRIPTABLE) )
-
-typedef void *Module;
-Module hxLoadLibrary(const String &) { return 0; }
-void hxFreeLibrary(Module) { }
 
 #else
 
@@ -82,10 +87,17 @@ Module hxLoadLibrary(String inLib)
 
    if (gLoadDebug)
    {
+#ifdef HX_WINRT
+      if (result)
+         WINRT_LOG("Loaded : %s.\n", inLib.__CStr());
+      else
+         WINRT_LOG("Error loading library: (%s) %s\n", inLib.__CStr(), dlerror());
+#else
       if (result)
          printf("Loaded : %s.\n", inLib.__CStr());
       else
          printf("Error loading library: (%s) %s\n", inLib.__CStr(), dlerror());
+#endif
    }
    return result;
 }
@@ -127,14 +139,20 @@ typedef hx::Object * (*prim_mult)(hx::Object **inArray,int inArgs);
 
 typedef void *(*FundFunc)(); 
 
- extern const char* EXTERN_CLASS_NAME;
 
 class ExternalPrimitive : public hx::Object
 {
 public:
+   HX_IS_INSTANCE_OF enum { _hx_ClassId = hx::clsIdExternalPrimitive };
+
+   inline void *operator new( size_t inSize )
+     { return hx::InternalCreateConstBuffer(0,(int)inSize); }
+   void operator delete( void *) { }
+
    ExternalPrimitive(void *inProc,int inArgCount,const String &inName) :
        mProc(inProc), mArgCount(inArgCount), mName(inName)
    {
+     mName.dupConst();
      functionName = ("extern::cffi "+mName).dupConst().__CStr();
    }
 
@@ -143,7 +161,7 @@ public:
 
    Dynamic __run()
    {
-      HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0, functionName, __FILE__, __LINE__,0);
+      HX_STACK_FRAME(hx::EXTERN_CLASS_NAME, "cffi",0, functionName, __FILE__, __LINE__,0);
       /**
        * TiVo workaround -- this code used to throw a Dynamic allocated on the
        * stack; this appears to tickle some kind of compiler bug on dev-arm
@@ -162,7 +180,7 @@ public:
    }
    Dynamic __run(D a)
    {
-      HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
+      HX_STACK_FRAME(hx::EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
       /**
        * TiVo workaround -- this code used to throw a Dynamic allocated on the
        * stack; this appears to tickle some kind of compiler bug on dev-arm
@@ -182,7 +200,7 @@ public:
    }
    Dynamic __run(D a,D b)
    {
-      HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
+      HX_STACK_FRAME(hx::EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
       /**
        * TiVo workaround -- this code used to throw a Dynamic allocated on the
        * stack; this appears to tickle some kind of compiler bug on dev-arm
@@ -201,7 +219,7 @@ public:
    }
    Dynamic __run(D a,D b,D c)
    {
-      HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
+      HX_STACK_FRAME(hx::EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
       /**
        * TiVo workaround -- this code used to throw a Dynamic allocated on the
        * stack; this appears to tickle some kind of compiler bug on dev-arm
@@ -220,7 +238,7 @@ public:
    }
    Dynamic __run(D a,D b,D c,D d)
    {
-      HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
+      HX_STACK_FRAME(hx::EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
       /**
        * TiVo workaround -- this code used to throw a Dynamic allocated on the
        * stack; this appears to tickle some kind of compiler bug on dev-arm
@@ -239,7 +257,7 @@ public:
    }
    Dynamic __run(D a,D b,D c,D d,D e)
    {
-      HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
+      HX_STACK_FRAME(hx::EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
       /**
        * TiVo workaround -- this code used to throw a Dynamic allocated on the
        * stack; this appears to tickle some kind of compiler bug on dev-arm
@@ -259,7 +277,7 @@ public:
 
    Dynamic __Run(const Array<Dynamic> &inArgs)
    {
-      HX_STACK_FRAME(EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
+      HX_STACK_FRAME(hx::EXTERN_CLASS_NAME, "cffi",0,  functionName, __FILE__, __LINE__,0);
       /**
        * TiVo workaround -- this code used to throw a Dynamic allocated on the
        * stack; this appears to tickle some kind of compiler bug on dev-arm
@@ -277,12 +295,6 @@ public:
       return ((prim_mult)mProc)( (hx::Object **)inArgs->GetBase(), inArgs->length );
    }
 
-   void __Mark(hx::MarkContext *__inCtx) {  HX_MARK_MEMBER(mName); }
-
-   #ifdef HXCPP_VISIT_ALLOCS
-   void __Visit(hx::VisitContext *__inCtx) {  HX_VISIT_MEMBER(mName); }
-   #endif
-
    int __Compare(const hx::Object *inRHS) const
    {
       const ExternalPrimitive *other = dynamic_cast<const ExternalPrimitive *>(inRHS);
@@ -299,13 +311,23 @@ public:
 };
 
 
+namespace
+{
+typedef std::map<String,ExternalPrimitive *> LoadedMap;
+LoadedMap sLoadedMap;
+}
+
+
 typedef void (*SetLoaderProcFunc)(void *(*)(const char *));
 typedef void *(*GetNekoEntryFunc)();
 typedef void (*NekoEntryFunc)();
 
-String GetFileContents(String inFile)
+
+#ifdef HXCPP_TRY_HAXELIB
+
+static String GetFileContents(String inFile)
 {
-#ifndef _WIN32
+#ifndef _MSC_VER
    FILE *file = fopen(inFile.__CStr(),"rb");
 #else
    FILE *file = _wfopen(inFile.__WCStr(),L"rb");
@@ -331,15 +353,14 @@ String GetFileContents(String inFile)
    return String(buf,strlen(buf)).dup();
 }
 
-#ifndef HX_WINRT
-String GetEnv(const char *inPath)
+static String GetEnv(const char *inPath)
 {
    const char *env  = getenv(inPath);
    String result(env,env?strlen(env):0);
    return result;
 }
 
-String FindHaxelib(String inLib)
+static String FindHaxelib(String inLib)
 {
    bool loadDebug = getenv("HXCPP_LOAD_DEBUG");
 
@@ -347,13 +368,11 @@ String FindHaxelib(String inLib)
 
    String haxepath;
 
-   #if !defined(HX_WINRT) && !defined(EPPC)
-      struct stat s;
-      if ( (stat(".haxelib",&s)==0 && (s.st_mode & S_IFDIR) ) )
-         haxepath = HX_CSTRING(".haxelib");
-      if (loadDebug)
-          printf( haxepath.length ? "Found local .haxelib\n" : "No local .haxelib\n");
-   #endif
+   struct stat s;
+   if ( (stat(".haxelib",&s)==0 && (s.st_mode & S_IFDIR) ) )
+      haxepath = HX_CSTRING(".haxelib");
+   if (loadDebug)
+      printf( haxepath.length ? "Found local .haxelib\n" : "No local .haxelib\n");
 
    if (haxepath.length==0)
    {
@@ -442,7 +461,8 @@ String FindHaxelib(String inLib)
    return path;
 }
 
-#endif
+#endif // HXCPP_TRY_HAXELIB
+
 
 #ifdef USE_STD_MAP
 typedef std::map<std::string,void *> RegistrationMap;
@@ -460,7 +480,13 @@ static bool sgLibPathIsInit = false;
 String __hxcpp_get_bin_dir()
 {
    return
-#ifdef _WIN32
+#if defined(HX_WINRT)
+  #ifdef HXCPP_M64
+    HX_CSTRING("WinRT64");
+  #else
+    HX_CSTRING("WinRT");
+  #endif
+#elif defined(_WIN32)
   #ifdef HXCPP_M64
     HX_CSTRING("Windows64");
   #else
@@ -505,7 +531,7 @@ String __hxcpp_get_bin_dir()
 String __hxcpp_get_dll_extension()
 {
    return
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(HX_WINRT)
     HX_CSTRING(".dll");
 #elif defined(IPHONEOS)
     HX_CSTRING(".ios.dylib");
@@ -540,7 +566,7 @@ void __hxcpp_push_dll_path(String inPath)
 
 
 
-#if (defined(IPHONE) || defined(EMSCRIPTEN) || defined(STATIC_LINK) || defined(APPLETV) ) && !defined(HXCPP_DLL_IMPORT) && (!defined(HXCPP_DLL_EXPORT) || defined(HXCPP_SCRIPTABLE) )
+#ifdef HXCPP_NO_DYNAMIC_LOADING
 
 Dynamic __loadprim(String inLib, String inPrim,int inArgCount)
 {
@@ -557,6 +583,10 @@ Dynamic __loadprim(String inLib, String inPrim,int inArgCount)
           full_name += HX_CSTRING("__MULT");
    }
 
+   String libString = inLib + HX_CSTRING("_") + full_name;
+   ExternalPrimitive *prim = sLoadedMap[libString];
+   if (prim)
+      return Dynamic(prim);
 
    if (sgRegisteredPrims)
    {
@@ -564,13 +594,17 @@ Dynamic __loadprim(String inLib, String inPrim,int inArgCount)
       // Try with lib name ...
       if (!registered)
       {
-         String libString = inLib + HX_CSTRING("_") + full_name;
          registered = (*sgRegisteredPrims)[libString.__CStr()];
+         if (registered)
+            full_name = libString;
       }
 
       if (registered)
       {
-         return Dynamic( new ExternalPrimitive(registered,inArgCount,HX_CSTRING("registered@")+full_name) );
+         libString = libString.dupConst();
+         prim = new ExternalPrimitive(registered,inArgCount,libString);
+         sLoadedMap[libString] = prim;
+         return Dynamic(prim);
       }
    }
 
@@ -597,12 +631,6 @@ int __hxcpp_unload_all_libraries() { return 0; }
 extern "C" void *hx_cffi(const char *inName);
 
 
-#if !defined(ANDROID) && !defined(HX_WINRT) && !defined(IPHONE) && !defined(EMSCRIPTEN) && !defined(STATIC_LINK) && !defined(APPLETV)
-    #define HXCPP_TRY_HAXELIB
-#endif
-
-
-
 void *__hxcpp_get_proc_address(String inLib, String full_name,bool inNdllProc,bool inQuietFail)
 {
    String bin = __hxcpp_get_bin_dir();
@@ -615,7 +643,9 @@ void *__hxcpp_get_proc_address(String inLib, String full_name,bool inNdllProc,bo
    String module_name = inLib;
    #endif
 
-   #if defined(IPHONE) || defined(APPLETV)
+   #if defined(HX_WINRT) && defined(HXCPP_DEBUG)
+   gLoadDebug = true;
+   #elif defined(IPHONE) || defined(APPLETV)
    gLoadDebug = true;
    setenv("DYLD_PRINT_APIS","1",true);
 
@@ -626,8 +656,9 @@ void *__hxcpp_get_proc_address(String inLib, String full_name,bool inNdllProc,bo
    if (!sgLibPathIsInit)
    {
       sgLibPathIsInit = true;
-
+      #ifndef HX_WINRT 
       sgLibPath.push_back("./");
+	  #endif
       #ifdef HX_MACOS
       sgLibPath.push_back("@executable_path/");
       #endif
@@ -663,7 +694,9 @@ void *__hxcpp_get_proc_address(String inLib, String full_name,bool inNdllProc,bo
 
    if (!module && gLoadDebug)
    {
-      #ifdef ANDROID
+      #ifdef HX_WINRT
+      WINRT_LOG("Searching for %s...\n", inLib.__s);
+      #elif defined(ANDROID)
        __android_log_print(ANDROID_LOG_INFO, "loader", "Searching for %s...", module_name.__s);
       #else
       printf("Searching for %s...\n", inLib.__s);
@@ -672,16 +705,30 @@ void *__hxcpp_get_proc_address(String inLib, String full_name,bool inNdllProc,bo
 
    String haxelibPath;
 
+#ifdef HX_WINRT
+   for (int e = 0; module == 0 && e<1; e++) //only accept DLL
+#else
    for(int e=0; module==0 && e<3; e++)
+#endif
    {
       String extension = e==0 ? deviceExt : e==1 ? HX_CSTRING(".ndll") : HX_CSTRING("");
 
       for(int path=0;path<sgLibPath.size();path++)
       {
+#if defined(HX_WINRT)
+         if (gLoadDebug)
+		 {
+            WINRT_LOG(" module_name: [%s]  extension: [%s]\n", module_name.__s, extension.__s);
+		 }
+		 String testPath = module_name + extension;
+#else
          String testPath = String( sgLibPath[path].c_str() ) +  module_name + extension;
+#endif
          if (gLoadDebug)
          {
-            #ifndef ANDROID
+            #ifdef HX_WINRT
+            WINRT_LOG(" try %s...\n", testPath.__s);
+            #elif !defined(ANDROID)
             printf(" try %s...\n", testPath.__s);
             #else
             __android_log_print(ANDROID_LOG_INFO, "loader", "Try %s", testPath.__s);
@@ -692,7 +739,9 @@ void *__hxcpp_get_proc_address(String inLib, String full_name,bool inNdllProc,bo
          {
             if (gLoadDebug)
             {
-               #ifndef ANDROID
+               #ifdef HX_WINRT
+               WINRT_LOG("Found %s\n", testPath.__s);
+               #elif !defined(ANDROID)
                printf("Found %s\n", testPath.__s);
                #else
                __android_log_print(ANDROID_LOG_INFO, "loader", "Found %s", testPath.__s);
@@ -811,6 +860,7 @@ int __hxcpp_unload_all_libraries()
 }
 
 
+
 Dynamic __loadprim(String inLib, String inPrim,int inArgCount)
 {
    String full_name = inPrim;
@@ -825,20 +875,25 @@ Dynamic __loadprim(String inLib, String inPrim,int inArgCount)
       default:
           full_name += HX_CSTRING("__MULT");
    }
-   void *proc = __hxcpp_get_proc_address(inLib,full_name,true);
 
+   String primName = inLib+HX_CSTRING("@")+full_name;
+   ExternalPrimitive *saved = sLoadedMap[primName];
+   if (saved)
+      return Dynamic(saved);
+
+   void *proc = __hxcpp_get_proc_address(inLib,full_name,true);
    if (proc)
    {
-      // Split this to avoid a collect after ExternalPrimitive::new, but before its
-      //  inline constructor is run...
-      String primName = inLib+HX_CSTRING("@")+full_name;
-      return Dynamic( new ExternalPrimitive(proc,inArgCount,primName) );
+      primName = primName.dupConst();
+
+      saved = new ExternalPrimitive(proc,inArgCount,primName);
+      sLoadedMap[primName] = saved;
+      return Dynamic(saved);
    }
    return null();
 }
 
-
-#endif // not IPHONE
+#endif // not HXCPP_NO_DYNAMIC_LOADING
 
 void __hxcpp_run_dll(String inLib, String inFunc)
 {

@@ -26,7 +26,7 @@ extern void __hxt_new_string(void* result, int size);
 
 namespace hx
 {
-#if defined(HX_MACOS) || defined(HX_WINDOWS) || defined(HX_LINUX)
+#if defined(HX_MACOS) || defined(HX_WINDOWS) || defined(HX_LINUX) || defined(__ORBIS__)
 int sgMinimumWorkingMemory       = 20*1024*1024;
 int sgMinimumFreeSpace           = 10*1024*1024;
 #else
@@ -44,7 +44,7 @@ int sgTargetFreeSpacePercentage  = 100;
 // Called internally before and GC operations
 void CommonInitAlloc()
 {
-   #ifndef HX_WINRT
+   #if !defined(HX_WINRT) && !defined(__SNC__) && !defined(__ORBIS__)
    const char *minimumWorking = getenv("HXCPP_MINIMUM_WORKING_MEMORY");
    if (minimumWorking)
    {
@@ -84,7 +84,7 @@ void *String::operator new( size_t inSize )
 
 void __hxcpp_collect(bool inMajor)
 {
-	hx::InternalCollect(inMajor,false);
+   hx::InternalCollect(inMajor,inMajor);
 }
 
 
@@ -113,7 +113,7 @@ void GCAddFinalizer(hx::Object *v, finalizer f)
 
 HX_CHAR *NewString(int inLen)
 {
-   HX_CHAR *result =  (HX_CHAR *)hx::InternalNew( (inLen+1)*sizeof(HX_CHAR), false );
+   char *result =  (char *)hx::InternalNew( (inLen+1)*sizeof(char), false );
    result[inLen] = '\0';
 #ifdef HXCPP_TELEMETRY
    __hxt_new_string(result, inLen+1);
@@ -152,7 +152,7 @@ void *NewGCPrivate(void *inData,int inSize)
 
 void __hxcpp_enable(bool inEnable)
 {
-	hx::InternalEnableGC(inEnable);
+   hx::InternalEnableGC(inEnable);
 }
 
 void  __hxcpp_set_minimum_working_memory(int inBytes)
@@ -170,4 +170,13 @@ void  __hxcpp_set_target_free_space_percentage(int inPercentage)
    hx::sgTargetFreeSpacePercentage = inPercentage;
 }
 
+bool __hxcpp_is_const_string(const ::String &inString)
+{
+   #ifdef HXCPP_ALIGN_ALLOC
+   // Unaligned must be native const
+   if ( ((size_t)inString.__s) & 0x3 )
+      return true;
+   #endif
+   return ((unsigned int *)inString.__s)[-1] & HX_GC_CONST_ALLOC_BIT;
+}
 
