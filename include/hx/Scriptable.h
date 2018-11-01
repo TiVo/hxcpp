@@ -173,7 +173,9 @@ void ScriptableRegisterInterface( String inName, ScriptNamedFunction *inFunction
 hx::Class ScriptableGetClass(void *);
 int ScriptableGetType(void *);
 void ScriptableMark(void *, hx::Object *, HX_MARK_PARAMS);
+#ifdef HXCPP_VISIT_ALLOCS
 void ScriptableVisit(void *, hx::Object *, HX_VISIT_PARAMS);
+#endif
 bool ScriptableField(hx::Object *, const ::String &,hx::PropertyAccess inCallProp,Dynamic &outResult);
 bool ScriptableField(hx::Object *, int inName,hx::PropertyAccess inCallProp,Float &outResult);
 bool ScriptableField(hx::Object *, int inName,hx::PropertyAccess inCallProp,Dynamic &outResult);
