@@ -570,9 +570,13 @@ inline void MarkObjectAlloc(hx::Object *inPtr ,hx::MarkContext *__inCtx)
 
 
 
-
+#ifdef HXCPP_VISIT_ALLOCS
 #define HX_VISIT_MEMBER_NAME(x,name) hx::VisitMember(x, __inCtx )
 #define HX_VISIT_MEMBER(x) hx::VisitMember(x, __inCtx )
+#else
+#define HX_VISIT_MEMBER_NAME(x,name)
+#define HX_VISIT_MEMBER(x)
+#endif
 
 #define HX_VISIT_OBJECT(ioPtr) \
   { if (ioPtr && !(((unsigned char *)ioPtr)[HX_GC_CONST_ALLOC_MARK_OFFSET] & HX_GC_CONST_ALLOC_MARK_BIT) ) __inCtx->visitObject( (hx::Object **)&ioPtr); }
