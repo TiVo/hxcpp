@@ -172,7 +172,9 @@ struct CppiaExpr
    virtual const char *getName() { return "CppiaExpr"; }
    virtual CppiaExpr   *link(CppiaModule &data)   { return this; }
    virtual void mark(hx::MarkContext *ctx) { };
+#ifdef HXCPP_VISIT_ALLOCS
    virtual void visit(hx::VisitContext *ctx) { };
+#endif
    virtual bool isBoolInt() { return false; }
 
 
@@ -346,7 +348,9 @@ struct TypeData
 
    bool isClassOf(Dynamic inInstance);
    void mark(hx::MarkContext *__inCtx);
+#ifdef HXCPP_VISIT_ALLOCS
    void visit(hx::VisitContext *__inCtx);
+#endif
    void link(CppiaModule &inData);
 };
 
@@ -381,7 +385,9 @@ public:
    void boot(CppiaCtx *ctx);
    void where(CppiaExpr *e);
    void mark(hx::MarkContext *ctx);
+#ifdef HXCPP_VISIT_ALLOCS
    void visit(hx::VisitContext *ctx);
+#endif
    int  getInterfaceSlot(const std::string &inName);
    int  findInterfaceSlot(const std::string &inName);
    CppiaClassInfo *findClass( ::String inName );
@@ -466,7 +472,9 @@ struct CppiaStackVar
    void setInFrame(unsigned char *inFrame,Dynamic inValue);
    Dynamic getInFrame(const unsigned char *inFrame);
    void markClosure(char *inBase, hx::MarkContext *__inCtx);
+#ifdef HXCPP_VISIT_ALLOCS
    void visitClosure(char *inBase, hx::VisitContext *__inCtx);
+#endif
    void link(CppiaModule &inModule, bool hasDefault=false);
    void linkDefault();
    void setDefault(CppiaCtx *inCxt, const CppiaConst &inDefault);
@@ -542,6 +550,7 @@ struct CppiaVar
          default:;
       }
    }
+#ifdef HXCPP_VISIT_ALLOCS
    inline void visit(hx::Object *inThis,hx::VisitContext *__inCtx)
    {
       switch(storeType)
@@ -551,10 +560,12 @@ struct CppiaVar
          default:;
       }
    }
-
+#endif
 
    void mark(hx::MarkContext *__inCtx);
+#ifdef HXCPP_VISIT_ALLOCS
    void visit(hx::VisitContext *__inCtx);
+#endif
 };
 
 

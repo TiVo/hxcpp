@@ -2407,7 +2407,7 @@ void *hx::InternalNew(int inSize, bool inIsObject)
 }
 
 
-void *hx::InternalRealloc(void *ptr, int new_size)
+void *hx::InternalRealloc(void *ptr, int new_size, bool inExpand)
 {
     void *ret = (HaxeThread::Get(true))->Reallocate(ptr, new_size);
 
@@ -2438,6 +2438,12 @@ void *hx::Object::operator new(size_t inSize, bool inIsObject, const char *)
 void __hxcpp_set_finalizer(Dynamic inObject, void *inFinalizer)
 {
     SetFinalizer(inObject.mPtr, 0, 0, (HaxeFinalizer) inFinalizer);
+}
+
+void _hx_set_finalizer(Dynamic inObj, void (*inFunc)(Dynamic) )
+{
+	// TODO - not sure this is correct.
+    SetFinalizer(inObj.mPtr, 0, 0, (HaxeFinalizer) *inFunc);
 }
 
 
@@ -2567,11 +2573,11 @@ void __hxcpp_gc_safe_point()
 
 int __hxcpp_gc_used_bytes()
 {
-    return __hxcpp_gc_mem_info(0);
+    return (int) __hxcpp_gc_mem_info(0);
 }
 
 
-int __hxcpp_gc_mem_info(int which)
+double __hxcpp_gc_mem_info(int which)
 {
     switch (which) {
     case 1:

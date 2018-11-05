@@ -319,12 +319,14 @@ void CppiaVar::mark(hx::MarkContext *__inCtx)
    HX_MARK_MEMBER(objVal);
    HX_MARK_MEMBER(name);
 }
+#ifdef HXCPP_VISIT_ALLOCS
 void CppiaVar::visit(hx::VisitContext *__inCtx)
 {
    HX_VISIT_MEMBER(stringVal);
    HX_VISIT_MEMBER(objVal);
    HX_VISIT_MEMBER(name);
 }
+#endif
 
 
 
@@ -454,6 +456,7 @@ void CppiaStackVar::markClosure(char *inBase, hx::MarkContext *__inCtx)
    }
 }
 
+#ifdef HXCPP_VISIT_ALLOCS
 void CppiaStackVar::visitClosure(char *inBase, hx::VisitContext *__inCtx)
 {
    switch(storeType)
@@ -467,6 +470,7 @@ void CppiaStackVar::visitClosure(char *inBase, hx::VisitContext *__inCtx)
       default: ;
    }
 }
+#endif
 
 void CppiaStackVar::link(CppiaModule &inModule, bool hasDefault)
 {

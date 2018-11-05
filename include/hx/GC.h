@@ -12,7 +12,13 @@
 
 #define HX_GC_CONST_ALLOC_BIT  0x80000000
 #define HX_GC_CONST_ALLOC_MARK_BIT  0x80
+#define HX_GC_NO_STRING_HASH   0x40000000
+#define HX_GC_NO_HASH_MASK     (HX_GC_CONST_ALLOC_BIT | HX_GC_NO_STRING_HASH)
 
+// Must allign allocs to 8 bytes to match floating point requirement?
+#ifdef HXCPP_ALIGN_FLOAT
+   #define HXCPP_ALIGN_ALLOC
+#endif
 
 
 
@@ -33,7 +39,7 @@ HXCPP_EXTERN_CLASS_ATTRIBUTES void  __hxcpp_collect(bool inMajor=true);
 HXCPP_EXTERN_CLASS_ATTRIBUTES void   __hxcpp_gc_compact();
 HXCPP_EXTERN_CLASS_ATTRIBUTES int   __hxcpp_gc_trace(hx::Class inClass, bool inPrint);
 HXCPP_EXTERN_CLASS_ATTRIBUTES int   __hxcpp_gc_used_bytes();
-HXCPP_EXTERN_CLASS_ATTRIBUTES double __hxcpp_gc_mem_info(int inWhat);
+HXCPP_EXTERN_CLASS_ATTRIBUTES double   __hxcpp_gc_mem_info(int inWhat);
 HXCPP_EXTERN_CLASS_ATTRIBUTES void  __hxcpp_enter_gc_free_zone();
 HXCPP_EXTERN_CLASS_ATTRIBUTES void  __hxcpp_exit_gc_free_zone();
 HXCPP_EXTERN_CLASS_ATTRIBUTES void  __hxcpp_gc_safe_point();
@@ -132,11 +138,13 @@ struct InternalFinalizer
 {
    InternalFinalizer(hx::Object *inObj, finalizer inFinalizer=0);
 
+   void Mark() { mUsed=true; }
    #ifdef HXCPP_VISIT_ALLOCS
    void Visit(VisitContext *__inCtx);
    #endif
    void Detach();
 
+   bool      mUsed;
    bool      mValid;
    finalizer mFinalizer;
    hx::Object  *mObject;
@@ -188,7 +196,7 @@ void GCRemoveRoot(hx::Object **inRoot);
 
 // This is used internally in hxcpp
 // It calls InternalNew, and takes care of null-terminating the result
-char *NewString(int inLen);
+HX_CHAR *NewString(int inLen);
 
 // The concept of 'private' is from the old conservative Gc method.
 // Now with explicit marking, these functions do the same thing, which is

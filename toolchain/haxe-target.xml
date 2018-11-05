@@ -5,7 +5,7 @@
 
 <pragma once="true" />
 
-
+<set name="HXCPP_USE_STOCK_GC" value="1" unless="HXCPP_USE_STOCK_GC" />
 <!-- Use value from Build.xml file unless one is specified from the haxe defines -->
 <set name="hxcpp_api_level" value="${HXCPP_API_LEVEL}" unless="hxcpp_api_level" if="HXCPP_API_LEVEL"  />
 

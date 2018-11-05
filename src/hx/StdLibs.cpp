@@ -301,9 +301,9 @@ void __trace(Dynamic inObj, Dynamic info)
 
       Dynamic d1, d2;
       d1 = Dynamic((info)->__Field(HX_CSTRING("fileName"), HX_PROP_DYNAMIC));
-      d2 = Dynamic((info)->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC))
+      d2 = Dynamic((info)->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC));
       const char *filename = d1 == null() ? "?" : d1->toString().__s;
-      int line = d1 == null() ? 0 : dl->__ToInt();
+      int line = d1 == null() ? 0 : d2->__ToInt();
 
    #ifdef HX_WINRT
       WINRT_PRINTF("%s:%d: %s\n", filename, line, message );
@@ -353,6 +353,7 @@ double  __time_stamp()
    return (double)clock() / ( (double)CLOCKS_PER_SEC);
 #else
 #ifdef HX_LINUX
+    static double t0 = 0;
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     double t = (ts.tv_sec + (((double) ts.tv_nsec ) * 1e-9));

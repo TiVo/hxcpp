@@ -38,7 +38,9 @@ static bool isNumeric(ExprType t) { return t==etInt || t==etFloat; }
 
 
 void cppiaClassMark(CppiaClassInfo *inClass,hx::MarkContext *__inCtx);
+#ifdef HXCPP_VISIT_ALLOCS
 void cppiaClassVisit(CppiaClassInfo *inClass,hx::VisitContext *__inCtx);
+#endif
 int getScriptId(hx::Class inClass);
 
 #ifndef __has_builtin
