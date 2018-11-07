@@ -336,7 +336,7 @@ void MarkClassStatics(hx::MarkContext *__inCtx)
       if (c->__meta__.mPtr || c->mMarkFunc)
       {
          #ifdef HXCPP_DEBUG
-         hx::MarkPushClass(i->first.__s,__inCtx);
+         hx::MarkPushClass(i->first.c_str(),__inCtx);
          hx::MarkSetMember("statics",__inCtx);
          #endif
 
