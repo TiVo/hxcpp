@@ -7,7 +7,8 @@ class Tools {
 
   public static function exit(exitCode:Int) {
     for (hook in onExit) {
-      hook(exitCode);
+        // Disabling because it causes hangs on compilation error.
+        //hook(exitCode);
     }
     Sys.exit(exitCode);
   }
