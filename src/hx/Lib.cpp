@@ -2,8 +2,12 @@
 
 #include <stdio.h>
 #include <string>
+
+#ifdef USE_STD_MAP
 #include <map>
+#else
 #include <tr1/unordered_map>
+#endif
 
 #include <vector>
 #include <stdlib.h>

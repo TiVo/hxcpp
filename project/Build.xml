@@ -7,7 +7,7 @@
 <import name="libs/std/Build.xml" />
 <import name="libs/zlib/Build.xml" />
 <import name="libs/regexp/Build.xml" />
-<import name="libs/mysql/Build.xml"  />
+<import name="libs/mysql/Build.xml" />
 <import name="libs/sqlite/Build.xml" />
 
 
@@ -72,7 +72,7 @@
    <target id="zlib"/>
    <!-- TiVo disables some libraries that are not available for STB targets -->
    <target id="mysql" unless="tivo" />
-   <target id="sqlite" unless="tivo|winrt" /><!-- TODO -->
+   <target id="sqlite" unless="tivo || winrt" /><!-- TODO -->
    <section if="static_link">
       <target id="msvccompat" if="windows" unless="mingw||MSVC19" />
       <target id="linuxcompat" if="linux" />

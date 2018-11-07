@@ -271,39 +271,40 @@ void __hxcpp_stdlibs_boot()
 
 void __trace(Dynamic inObj, Dynamic info)
 {
-   String text;
-   if (inObj != null())
-      text = inObj->toString();
-   const char *message = text.__s ? text.__s : "null";
+    String message;
+    const char *filename;
+    int line;
 
-   if (info==null())
-   {
-   #ifdef HX_WINRT
-      WINRT_PRINTF("%s\n", message );
-   #elif defined(TIZEN)
-      dlog_dprint(DLOG_INFO, "trace","%s\n", message );
-   #elif defined(HX_ANDROID) && !defined(HXCPP_EXE_LINK)
-      __android_log_print(ANDROID_LOG_INFO, "trace","%s",message );
-   #elif defined(WEBOS)
-      syslog(LOG_INFO, "%s", message );
-   #elif defined(HX_WINDOWS) && defined(HX_SMART_STRINGS)
-      if (text.isUTF16Encoded())
-         printf("%S\n", (wchar_t *)text.__w );
-      else
-         printf("%s\n", message);
-   #else
-      printf("%s\n", message );
-   #endif
-
-   }
-   else
-   {
-
-      Dynamic d1, d2;
-      d1 = Dynamic((info)->__Field(HX_CSTRING("fileName"), HX_PROP_DYNAMIC));
-      d2 = Dynamic((info)->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC));
-      const char *filename = d1 == null() ? "?" : d1->toString().__s;
-      int line = d1 == null() ? 0 : d2->__ToInt();
+    if (inObj == null()) {
+        message = "null";
+    }
+    else {
+        message = inObj->toString();
+        if (message.__str == null) {
+            message = "null";
+        }
+    }
+    
+    if (info == null()) {
+        filename = "?";
+        line = 0;
+    }
+    else {
+        Dynamic d1 = info->__Field(HX_CSTRING("filename"), HX_PROP_DYNAMIC);
+        if (d1 == null()) {
+            filename = "?";
+        }
+        else {
+            filename = d1->toString().__s;
+        }
+        Dynamic d2 = info->__Field(HX_CSTRING("line"), HX_PROP_DYNAMIC);
+        if (d2 == null()) {
+            line = 0;
+        }
+        else {
+            line = d2->__ToInt();
+        }
+    }
 
    #ifdef HX_WINRT
       WINRT_PRINTF("%s:%d: %s\n", filename, line, message );
@@ -321,8 +322,6 @@ void __trace(Dynamic inObj, Dynamic info)
    #else
       printf("%s:%d: %s\n",filename, line, message );
    #endif
-   }
-
 }
 
 void __hxcpp_exit(int inExitCode)
@@ -351,9 +350,7 @@ double  __time_stamp()
          return (now-t0)*period;
    }
    return (double)clock() / ( (double)CLOCKS_PER_SEC);
-#else
-#ifdef HX_LINUX
-    static double t0 = 0;
+#elif defined (HX_LINUX)
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     double t = (ts.tv_sec + (((double) ts.tv_nsec ) * 1e-9));
@@ -369,7 +366,6 @@ double  __time_stamp()
    return t-t0;
 #else
    return (double)clock() / ( (double)CLOCKS_PER_SEC);
-#endif
 #endif
 }
 

@@ -49,18 +49,14 @@ struct Deque : public Array_obj<Dynamic>
 	HxMutex     mMutex;
 	void PushBack(Dynamic inValue)
 	{
-		hx::EnterGCFreeZone();
 		AutoLock lock(mMutex);
-		hx::ExitGCFreeZone();
 
 		push(inValue);
 		mSemaphore.Set();
 	}
 	void PushFront(Dynamic inValue)
 	{
-		hx::EnterGCFreeZone();
 		AutoLock lock(mMutex);
-		hx::ExitGCFreeZone();
 
 		unshift(inValue);
 		mSemaphore.Set();
@@ -69,11 +65,9 @@ struct Deque : public Array_obj<Dynamic>
 	
 	Dynamic PopFront(bool inBlock)
 	{
-		hx::EnterGCFreeZone();
 		AutoLock lock(mMutex);
 		if (!inBlock)
 		{
-			hx::ExitGCFreeZone();
 			return shift();
 		}
 		// Ok - wait for something on stack...
@@ -81,9 +75,8 @@ struct Deque : public Array_obj<Dynamic>
 		{
 			mSemaphore.Reset();
 			lock.Unlock();
+			hx::EnterGCFreeZone();
 			mSemaphore.Wait();
-			lock.Lock();
-		}
 			hx::ExitGCFreeZone();
 			lock.Lock();
 		}
@@ -108,11 +101,12 @@ struct Deque : public Array_obj<Dynamic>
 	
 	Dynamic PopFront(bool inBlock)
 	{
-		hx::EnterGCFreeZone();
 		AutoLock lock(mSemaphore);
-		while(inBlock && !length)
+		while(inBlock && !length) {
+            hx::EnterGCFreeZone();
 			mSemaphore.QWait();
-		hx::ExitGCFreeZone();
+		    hx::ExitGCFreeZone();
+        }
 		Dynamic result =  shift();
 		if (length)
 			mSemaphore.QSet();

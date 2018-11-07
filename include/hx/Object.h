@@ -234,7 +234,7 @@ public:
    virtual bool __HasField(const String &inString);
    virtual hx::Val __Field(const String &inString, hx::PropertyAccess inCallProp);
 
-   #if (HXCPP_API_LEVEL <= 332)
+   #if (HXCPP_API_LEVEL <= 330)
    virtual bool __Is(hx::Object *inClass) const { return true; }
    virtual hx::Object *__GetRealObject() { return this; }
    bool __Is(Dynamic inClass ) const;

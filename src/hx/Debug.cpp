@@ -1,6 +1,12 @@
 #include <hxcpp.h>
 #include <list>
+
+#ifdef USE_STD_MAP
 #include <map>
+#else
+#include <tr1/unordered_map>
+#endif
+
 #include <vector>
 #include <string>
 #include <hx/Debug.h>
@@ -23,7 +29,7 @@
 #define DBGLOG printf
 #endif
 
-#if _MSC_VER
+#if (defined _MSC_VER && _MSC_VER)
 #ifndef snprintf
 #define snprintf _snprintf
 #endif
