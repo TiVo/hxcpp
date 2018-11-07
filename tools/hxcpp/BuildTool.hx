@@ -1694,7 +1694,7 @@ class BuildTool
       Log.println("\x1b[1mhxcpp ("+tivo+" mods) \x1b[0m\x1b[3;37m(Haxe C++ Runtime Support)\x1b[0m \x1b[1m(" + getVersion() + ")\x1b[0m");
       Log.println("");
 #else
-      Log.println("\x1b[33;1m __                          ");             
+      Log.println("\x1b[33;1m __                          ");
       Log.println("/\\ \\                                      ");
       Log.println("\\ \\ \\___    __  _   ___   _____   _____   ");
       Log.println(" \\ \\  _ `\\ /\\ \\/'\\ /'___\\/\\ '__`\\/\\ '__`\\ ");

@@ -6107,7 +6107,7 @@ void GCPrepareMultiThreaded()
 
 bool IsHaxeThread()
 {
-	return false; 	// TODO
+    return (tlsStackContext != 0);
 }
 
 void SetTopOfStack(int *inTop,bool inForce)

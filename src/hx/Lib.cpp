@@ -2,8 +2,12 @@
 
 #include <stdio.h>
 #include <string>
+
+#ifdef USE_STD_MAP
 #include <map>
+#else
 #include <tr1/unordered_map>
+#endif
 
 #include <vector>
 #include <stdlib.h>
@@ -308,7 +312,12 @@ public:
 
 namespace
 {
+
+#ifdef USE_STD_MAP
 typedef std::map<String,ExternalPrimitive *> LoadedMap;
+#else
+typedef std::tr1::unordered_map<std::string,ExternalPrimitive *> LoadedMap;
+#endif
 LoadedMap sLoadedMap;
 }
 
@@ -872,7 +881,7 @@ Dynamic __loadprim(String inLib, String inPrim,int inArgCount)
    }
 
    String primName = inLib+HX_CSTRING("@")+full_name;
-   ExternalPrimitive *saved = sLoadedMap[primName];
+   ExternalPrimitive *saved = sLoadedMap[primName.c_str()];
    if (saved)
       return Dynamic(saved);
 
@@ -882,7 +891,7 @@ Dynamic __loadprim(String inLib, String inPrim,int inArgCount)
       primName = primName.dupConst();
 
       saved = new ExternalPrimitive(proc,inArgCount,primName);
-      sLoadedMap[primName] = saved;
+      sLoadedMap[primName.c_str()] = saved;
       return Dynamic(saved);
    }
    return null();

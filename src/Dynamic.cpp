@@ -538,6 +538,9 @@ hx::IndexRef Dynamic::operator[](int inIndex)
 
 void Dynamic::ThrowBadFunctionError()
 {
+   #ifdef HXCPP_DEBUGGER
+   NullReference("Function", true);
+   #endif
     /**
      * TiVo workaround -- this code used to throw a Dynamic allocated on the
      * stack; this appears to tickle some kind of compiler bug on dev-arm
@@ -545,10 +548,7 @@ void Dynamic::ThrowBadFunctionError()
      * this issue.
     **/
    static Dynamic d(HX_NULL_FUNCTION_POINTER);
-   #ifdef HXCPP_DEBUGGER
-   NullReference("Function", true);
-   #endif
-   hx::Throw( HX_NULL_FUNCTION_POINTER );
+   hx::Throw(d);
 }
 
 #include <hx/DynamicImpl.h>

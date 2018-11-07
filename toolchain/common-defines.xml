@@ -8,13 +8,11 @@
  <!-- TiVo turns off HXCPP_VISIT_ALLOCS, which is not needed and only
       expands the size of executables unnecessarily -->
  <!-- <flag value="-DHXCPP_VISIT_ALLOCS" /> -->
- <!-- set -D_TIVO_ for all TiVo builds, allows C++ code to include
-      #ifdef _TIVO_ for TiVo-specific customizations -->
- <flag value="-D_TIVO_" if="tivo" />
  <flag value="-Dhaxe_210" if="haxe_210" tag="haxe" />
  <flag value="-DHXCPP_FLOAT32" if="HXCPP_FLOAT32" tag="haxe" />
  <flag value="-DHXCPP_CHECK_POINTER" if="HXCPP_CHECK_POINTER" tag="haxe" />
  <flag value="-DHXCPP_STACK_TRACE" if="HXCPP_STACK_TRACE" tag="haxe" />
+ <flag value="-DUSE_STD_MAP" if="USE_STD_MAP"/>
  <flag value="-DHXCPP_TELEMETRY" if="HXCPP_TELEMETRY" tag="haxe" />
  <flag value="-DHXCPP_PROFILER" if="HXCPP_PROFILER" tag="haxe" />
  <flag value="-DHXCPP_PROFILE_EXTERNS" if="HXCPP_PROFILE_EXTERNS" tag="debug" />
@@ -40,6 +38,10 @@
  <flag value='-DHXCPP_API_LEVEL=0' unless="hxcpp_api_level"  tag="haxe"/>
  <flag value='-DHXCPP_OBJC' if="objc"  tag="haxe"/>
  <flag value='-DHXCPP_GC_DEBUG_LEVEL=${HXCPP_GC_DEBUG_LEVEL}' if="HXCPP_GC_DEBUG_LEVEL" tag="gc" />
+ <flag value='-DHXCPP_USE_STOCK_GC' if="HXCPP_USE_STOCK_GC" tag="gc" />
+ <!-- set -D_TIVO_ for all TiVo builds, allows C++ code to include
+      #ifdef _TIVO_ for TiVo-specific customizations -->
+ <flag value="-D_TIVO_" if="tivo" tag="haxe" />
  <mmflag value='-Wno-invalid-offsetof' />
  <mmflag value='-Wno-format-security' />
 </xml>

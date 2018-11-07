@@ -92,9 +92,7 @@ inline int HxAtomicDec(volatile int *ioWhere)
    { return OSAtomicDecrement32Barrier(ioWhere)+1; }
 
 
-// XXX TiVo temporary -- only GCInternal.cpp uses this, and GCInternal.cpp
-// will go away; in the meantime, just don't do atomic
-#elif defined(HX_LINUX) && !defined TIVO_STB
+#elif defined(HX_LINUX)
 
 #define HX_HAS_ATOMIC 1
 

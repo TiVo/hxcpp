@@ -2549,7 +2549,7 @@ void *hx::InternalNew(int inSize, bool inIsObject)
 }
 
 
-void *hx::InternalRealloc(void *ptr, int new_size, bool inExpand)
+void *hx::InternalRealloc(void *ptr, int new_size)
 {
     // If the pointer is null, then this is actually a 'new', and definitely
     // not for an object since objects are never realloc'd
@@ -2625,14 +2625,6 @@ void __hxcpp_set_finalizer(Dynamic inObject, void *inFinalizer)
 {
     SetFinalizer(inObject.mPtr, 0, 0, (HaxeFinalizer) inFinalizer);
 }
-
-void _hx_set_finalizer(Dynamic inObj, void (*inFunc)(Dynamic) )
-{
-	// TODO - not sure this is correct.
-    SetFinalizer(inObj.mPtr, 0, 0, (HaxeFinalizer) *inFunc);
-}
-
-
 
 
 hx::Object *__hxcpp_weak_ref_create(Dynamic inObject)
@@ -2772,16 +2764,16 @@ void __hxcpp_gc_safe_point()
 
 int __hxcpp_gc_used_bytes()
 {
-    return (int) __hxcpp_gc_mem_info(0);
+    return __hxcpp_gc_mem_info(0);
 }
 
 
-double __hxcpp_gc_mem_info(int inWhich)
+int __hxcpp_gc_mem_info(int inWhich)
 {
     if ((inWhich == 0) || (inWhich > 3)) {
         //   MEM_INFO_USAGE - estimate of how much is needed by program (at
         //   last collect)
-        return (double) g_total_after_last_collect;
+        return g_total_after_last_collect;
     }
 
 #ifndef HXCPP_SINGLE_THREADED_APP    
@@ -2842,7 +2834,7 @@ double __hxcpp_gc_mem_info(int inWhich)
     pthread_cond_broadcast(&g_cond);
 #endif
     
-    return (double) total;
+    return total;
 }
 
 
