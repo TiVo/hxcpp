@@ -679,7 +679,7 @@ void val_buffer(buffer inBuffer,value inValue)
 
 
 
-// Call Function
+// Call Function 
 hx::Object * val_call0(hx::Object * arg1) THROWS
 {
    if (!arg1) Dynamic::ThrowBadFunctionError();

@@ -559,7 +559,6 @@ CppInt32__::CppInt32__(const Dynamic &inD) : mValue(inD->__ToInt()) { }
 }
 
 namespace hx {
-
 null BadCast()
 {
     /**

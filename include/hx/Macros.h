@@ -146,9 +146,9 @@ static  ::Dynamic Create##enum_obj(::String inName,hx::DynamicArray inArgs) \
    {  ::Dynamic d;  if (hx::FieldMapGet(&__mDynamicFields,inID,d)) return d; }
 
 #ifdef HXCPP_GC_GENERATIONAL
-#define HX_DYNAMIC_SET_FIELD(inName,inValue) hx::FieldMapSet(this,&__mDynamicFields,inName,inValue)
+#define HX_DYNAMIC_SET_FIELD(inName,inValue) hx::FieldMapSet(this,&__mDynamicFields,inName,inValue) 
 #else
-#define HX_DYNAMIC_SET_FIELD(inName,inValue) hx::FieldMapSet(&__mDynamicFields,inName,inValue)
+#define HX_DYNAMIC_SET_FIELD(inName,inValue) hx::FieldMapSet(&__mDynamicFields,inName,inValue) 
 #endif
 
 #define HX_APPEND_DYNAMIC_FIELDS(outFields) hx::FieldMapAppendFields(&__mDynamicFields,outFields)
@@ -367,7 +367,7 @@ void __hxcpp_lib_main() \
 // --- Functions and their parameters ----
 
 
-#define HX_ARR_LIST0
+#define HX_ARR_LIST0 
 #define HX_ARR_LIST1 inArgs[0]
 #define HX_ARR_LIST2 inArgs[0],inArgs[1]
 #define HX_ARR_LIST3 inArgs[0],inArgs[1],inArgs[2]
@@ -1195,7 +1195,7 @@ static ::Dynamic __##class##func(const Array< ::Dynamic> &inArgs) \
     ::Dynamic operator()(const Dynamic &inArg0,const Dynamic &inArg1,const Dynamic &inArg2,const Dynamic &inArg3,const Dynamic &inArg4,const Dynamic &inArg5,const Dynamic &inArg6,const Dynamic &inArg7,const Dynamic &inArg8,const Dynamic &inArg9,const Dynamic &inArg10,const Dynamic &inArg11,const Dynamic &inArg12,const Dynamic &inArg13,const Dynamic &inArg14,const Dynamic &inArg15,const Dynamic &inArg16,const Dynamic &inArg17,const Dynamic &inArg18,const Dynamic &inArg19,const Dynamic &inArg20,const Dynamic &inArg21,const Dynamic &inArg22,const Dynamic &inArg23); \
     ::Dynamic operator()(const Dynamic &inArg0,const Dynamic &inArg1,const Dynamic &inArg2,const Dynamic &inArg3,const Dynamic &inArg4,const Dynamic &inArg5,const Dynamic &inArg6,const Dynamic &inArg7,const Dynamic &inArg8,const Dynamic &inArg9,const Dynamic &inArg10,const Dynamic &inArg11,const Dynamic &inArg12,const Dynamic &inArg13,const Dynamic &inArg14,const Dynamic &inArg15,const Dynamic &inArg16,const Dynamic &inArg17,const Dynamic &inArg18,const Dynamic &inArg19,const Dynamic &inArg20,const Dynamic &inArg21,const Dynamic &inArg22,const Dynamic &inArg23,const Dynamic &inArg24); \
     ::Dynamic operator()(const Dynamic &inArg0,const Dynamic &inArg1,const Dynamic &inArg2,const Dynamic &inArg3,const Dynamic &inArg4,const Dynamic &inArg5,const Dynamic &inArg6,const Dynamic &inArg7,const Dynamic &inArg8,const Dynamic &inArg9,const Dynamic &inArg10,const Dynamic &inArg11,const Dynamic &inArg12,const Dynamic &inArg13,const Dynamic &inArg14,const Dynamic &inArg15,const Dynamic &inArg16,const Dynamic &inArg17,const Dynamic &inArg18,const Dynamic &inArg19,const Dynamic &inArg20,const Dynamic &inArg21,const Dynamic &inArg22,const Dynamic &inArg23,const Dynamic &inArg24,const Dynamic &inArg25); \
-
+ 
 
 
 #define HX_IMPLEMENT_INLINE_VARIANT_FUNCTIONS \
@@ -1205,7 +1205,7 @@ static ::Dynamic __##class##func(const Array< ::Dynamic> &inArgs) \
    ::Dynamic Variant::operator()(const Dynamic &inArg0,const Dynamic &inArg1,const Dynamic &inArg2) { CheckFPtr(); return valObject->__run(inArg0,inArg1,inArg2); } \
    ::Dynamic Variant::operator()(const Dynamic &inArg0,const Dynamic &inArg1,const Dynamic &inArg2,const Dynamic &inArg3) { CheckFPtr(); return valObject->__run(inArg0,inArg1,inArg2,inArg3); } \
    ::Dynamic Variant::operator()(const Dynamic &inArg0,const Dynamic &inArg1,const Dynamic &inArg2,const Dynamic &inArg3,const Dynamic &inArg4) { CheckFPtr(); return valObject->__run(inArg0,inArg1,inArg2,inArg3,inArg4); } \
-
+                                           
 
 
 #endif

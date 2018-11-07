@@ -80,7 +80,6 @@ Module hxLoadLibrary(String inLib)
    #endif
    
    Module result = dlopen(inLib.__CStr(), flags);
-
    if (gLoadDebug)
    {
 #ifdef HX_WINRT

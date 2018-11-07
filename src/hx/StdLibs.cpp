@@ -376,7 +376,7 @@ double  __time_stamp()
 #if defined(HX_WINDOWS) && !defined(HX_WINRT)
 
 /*
-ISWHITE and ParseCommandLine are based on the implementation of the
+ISWHITE and ParseCommandLine are based on the implementation of the 
 .NET Core runtime, CoreCLR, which is licensed under the MIT license:
 Copyright (c) Microsoft. All rights reserved.
 See LICENSE file in the CoreCLR project root for full license information.
@@ -401,7 +401,7 @@ static void ParseCommandLine(LPTSTR psrc, Array<String> &out)
        because the program name must be a legal NTFS/HPFS file name.
        Note that the double-quote characters are not copied, nor do they
        contribute to numchars.
-
+         
        This "simplification" is necessary for compatibility reasons even
        though it leads to mishandling of certain cases.  For example,
        "c:\tests\"test.exe will result in an arg0 of c:\tests\ and an

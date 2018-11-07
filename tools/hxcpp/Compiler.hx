@@ -151,7 +151,7 @@ class Compiler
       else if (optimFlags>1)
          Log.error("More than one optimization tag has been set:" + tagFilter);
    }
-      
+
 
    public function getCompilerDefines(inTags:String)
    {
@@ -360,7 +360,7 @@ class Compiler
                //throw "Error : " + result + " - build cancelled";
             }
          }
-         
+
          if (cacheName!=null && !useCacheInPlace)
          {
             Log.info("", " caching " + cacheName);

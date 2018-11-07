@@ -2128,7 +2128,7 @@ void MarkObjectAllocUnchecked(hx::Object *inPtr,hx::MarkContext *__inCtx)
             }
          }
       }
-      
+
       if (flags & IMMIX_ALLOC_IS_CONTAINER)
       {
          #ifdef PROFILE_COLLECT
@@ -4987,7 +4987,7 @@ public:
       #if defined(SHOW_FRAGMENTATION) || defined(SHOW_MEM_EVENTS)
       GCLOG("Target memory %s, using %s\n",  formatBytes(sWorkingMemorySize).c_str(), formatBytes(mem).c_str() );
       #endif
- 
+
       // Large alloc target
       int blockSize =  mAllBlocks.size()<<IMMIX_BLOCK_BITS;
       if (blockSize > mLargeAllocSpace)

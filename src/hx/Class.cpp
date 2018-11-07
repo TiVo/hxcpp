@@ -339,7 +339,7 @@ void MarkClassStatics(hx::MarkContext *__inCtx)
          hx::MarkPushClass(i->first.c_str(),__inCtx);
          hx::MarkSetMember("statics",__inCtx);
          #endif
-
+      
          c->MarkStatics(__inCtx);
 
          #ifdef HXCPP_DEBUG

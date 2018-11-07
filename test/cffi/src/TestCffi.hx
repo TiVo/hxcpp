@@ -85,13 +85,6 @@ class TestCffi extends TestBase
 
 
 
-      for(i in 0...100)
-        setRoot(i,[i]);
-
-      Gc.run(true);
-
-
-
       var base = "Hello ";
       var bytes = haxe.io.Bytes.ofString(base).getData();
 
@@ -183,3 +176,5 @@ class TestCffi extends TestBase
         createDeepAbstracts(inDepth-1);
    }
 }
+
+
