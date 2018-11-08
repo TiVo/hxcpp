@@ -20,7 +20,6 @@
  <flag value="-DHXCPP_STACK_VARS" if="HXCPP_STACK_VARS" tag="haxe" />
  <flag value="-DHXCPP_DEBUGGER" if="HXCPP_DEBUGGER" tag="haxe" />
  <flag value="-DHXCPP_PARANOID" if="HXCPP_PARANOID" tag="haxe" />
- <flag value='-DHXCPP_USE_STOCK_GC' if="HXCPP_USE_STOCK_GC" tag="gc" />
  <flag value="-DHXCPP_GC_MOVING" if="HXCPP_GC_MOVING" tag="gc" />
  <flag value="-DHXCPP_GC_BIG_BLOCKS" if="HXCPP_GC_BIG_BLOCKS" tag="gc" />
  <flag value="-DHXCPP_GC_SUMMARY" if="HXCPP_GC_SUMMARY" tag="gc" />
@@ -38,10 +37,12 @@
  <flag value='-DHXCPP_API_LEVEL=0' unless="hxcpp_api_level"  tag="haxe"/>
  <flag value='-DHXCPP_OBJC' if="objc"  tag="haxe"/>
  <flag value='-DHXCPP_GC_DEBUG_LEVEL=${HXCPP_GC_DEBUG_LEVEL}' if="HXCPP_GC_DEBUG_LEVEL" tag="gc" />
- <flag value='-DHXCPP_USE_STOCK_GC' if="HXCPP_USE_STOCK_GC" tag="gc" />
  <!-- set -D_TIVO_ for all TiVo builds, allows C++ code to include
       #ifdef _TIVO_ for TiVo-specific customizations -->
  <flag value="-D_TIVO_" if="tivo" tag="haxe" />
  <mmflag value='-Wno-invalid-offsetof' />
  <mmflag value='-Wno-format-security' />
+ <!-- Define HXCPP_USE_TIVO_GC when compiling all code if HXCPP_USE_TIVO_GC
+	  is defined in the project -->
+ <flag value='-DHXCPP_USE_TIVO_GC' if="HXCPP_USE_TIVO_GC" tag="haxe,gc" />
 </xml>

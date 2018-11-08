@@ -5,7 +5,6 @@
 
 <pragma once="true" />
 
-<set name="HXCPP_USE_STOCK_GC" value="1" unless="HXCPP_USE_STOCK_GC" />
 <!-- Use value from Build.xml file unless one is specified from the haxe defines -->
 <set name="hxcpp_api_level" value="${HXCPP_API_LEVEL}" unless="hxcpp_api_level" if="HXCPP_API_LEVEL"  />
 
@@ -152,11 +151,11 @@
   <file name = "src/hx/CFFI.cpp" tags="haxe,static" />
   <file name = "src/hx/Date.cpp"/>
   <file name = "src/hx/gc/GcCommon.cpp" tags="haxe,gc" />
-  <file name = "src/hx/gc/Immix.cpp" if="HXCPP_USE_STOCK_GC" tags="haxe,gc" />
-  <file name = "src/hx/gc/GcRegCapture.cpp" if="HXCPP_USE_STOCK_GC" tags="haxe,gc" />
+  <file name = "src/hx/gc/Immix.cpp" unless="HXCPP_USE_TIVO_GC" tags="haxe,gc" />
+  <file name = "src/hx/gc/GcRegCapture.cpp" unless="HXCPP_USE_TIVO_GC" tags="haxe,gc" />
   <!-- XXX At TiVo we have our own multi-endian supporting GC -->
-  <file name = "src/hx/GCPooledV2.cpp" unless="HXCPP_USE_STOCK_GC || HXCPP_USE_GCPOOLEDV3" tags="haxe,gc" />
-  <file name = "src/hx/GCPooledV3.cpp" unless="HXCPP_USE_STOCK_GC" if="HXCPP_USE_GCPOOLEDV3" tags="haxe,gc" />
+  <file name = "src/hx/GCPooledV2.cpp" if="HXCPP_USE_TIVO_GC" unless="HXCPP_USE_GCPOOLEDV3" tags="haxe,gc" />
+  <file name = "src/hx/GCPooledV3.cpp" if="HXCPP_USE_TIVO_GC HXCPP_USE_GCPOOLEDV3" tags="haxe,gc" />
   <file name = "src/hx/Hash.cpp"/>
   <file name = "src/hx/Interface.cpp"/>
   <file name = "src/hx/Lib.cpp" tags="haxe,static" />

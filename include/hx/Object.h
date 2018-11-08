@@ -157,7 +157,10 @@ public:
    enum { _hx_ClassId = hx::clsIdDynamic };
 
 
-#ifdef HXCPP_USE_STOCK_GC
+#ifdef HXCPP_USE_TIVO_GC
+   // These allocate the function using the garbage-colleced malloc
+   void *operator new( size_t inSize, bool inContainer=true, const char *inName=0 );
+#else
    // These allocate the function using the garbage-colleced malloc
    inline void *operator new( size_t inSize, bool inContainer=true, const char *inName=0 )
    {
@@ -181,9 +184,6 @@ public:
          return result;
       #endif
    }
-#else
-   // These allocate the function using the garbage-colleced malloc
-   void *operator new( size_t inSize, bool inContainer=true, const char *inName=0 );
 #endif
 
    inline void *operator new( size_t inSize, hx::NewObjectType inType,  const char *inName=0 )

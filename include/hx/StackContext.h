@@ -78,8 +78,8 @@
    #define HX_STACK_BEGIN_CATCH
    #define HX_DEFINE_STACK_FRAME(__stackPosition, className, functionName, classFunctionHash, fullName,fileName, lineNumber, fileHash )
    #define HX_LOCAL_STACK_FRAME(a,b,c,d,e,f,g,h)
-   #define HX_STACK_FRAME(className, functionName, classFunctionHash, fullName,fileName, lineNumber, fileHash )
-   #define HX_STACKFRAME(pos)
+   #define HX_STACK_FRAME(className, functionName, classFunctionHash, fullName,fileName, lineNumber, fileHash ) hx::StackContext *_hx_ctx = hx::gMultiThreadMode ? hx::tlsStackContext : hx::gMainThreadContext;
+   #define HX_STACKFRAME(pos) hx::StackContext *_hx_ctx = hx::gMultiThreadMode ? hx::tlsStackContext : hx::gMainThreadContext;
    #define HX_JUST_GC_STACKFRAME hx::StackContext *_hx_ctx = hx::gMultiThreadMode ? hx::tlsStackContext : hx::gMainThreadContext;
    #define HX_GC_STACKFRAME(pos) HX_JUST_GC_STACKFRAME
    #define HX_CTX _hx_ctx
