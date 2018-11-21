@@ -431,7 +431,12 @@ static String FindHaxelib(String inLib)
    char *haxepath_c = strdup(haxepath.c_str());
    char *hp = strtok(haxepath_c, ":");
    while (hp) {
-      String dir = hp + HX_CSTRING("/") + inLib + HX_CSTRING("/");
+      // TiVo fix -- the original code just had "hp + HX_CSTRING..." which
+      // apparently in the new operator overload functions of String turn
+      // into the evaluation of the LHS as a bool value instead of a String,
+      // so fix by making sure to only append String instances
+      String dir = String(hp);
+      dir += HX_CSTRING("/") + inLib + HX_CSTRING("/");
 
       String dev = dir + HX_CSTRING(".dev");
       path = GetFileContents(dev);

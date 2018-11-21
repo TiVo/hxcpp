@@ -330,8 +330,21 @@ struct ExceptionStackFrame
    int line;
    #endif
 
+    // TiVo change ... the > 330 version doesn't work correctly, because the
+    // position instance is likely allocated on the stack and becomes invalid
+    // as the stack gets unwound ... and it doesn't seem worth it as all that
+    // is being saved by using the > 330 version, just a few assignments that
+    // take picoseconds of time
+   #if 0
+    
    #if HXCPP_API_LEVEL > 330
    const hx::StackPosition *position;
+   #else
+   const char *className;
+   const char *functionName;
+   const char *fileName;
+   #endif
+    
    #else
    const char *className;
    const char *functionName;

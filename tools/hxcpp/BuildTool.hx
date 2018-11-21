@@ -1379,10 +1379,7 @@ class BuildTool
       if (defines.exists("HXCPP_NO_COLOUR") || defines.exists("HXCPP_NO_COLOR"))
          Log.colorSupported = false;
       Log.verbose = defines.exists("HXCPP_VERBOSE");
-      // exitOnThreadError = defines.exists("HXCPP_EXIT_ON_ERROR");
-      // OF COURSE we want the compiler to exit on error ... why is this
-      // even an option???
-      exitOnThreadError = true;
+       exitOnThreadError = defines.exists("HXCPP_EXIT_ON_ERROR");
 
 
       os = Sys.systemName();

@@ -397,11 +397,21 @@ void StackContext::dumpExceptionStack()
 
 ExceptionStackFrame::ExceptionStackFrame(const StackFrame &inFrame)
 {
+   // TiVo fix - the position object itself may be allocated on the stack and
+   // must be deep copied
+   #if 0
+    
    // It is safe to use the pointer in 331+
    #if HXCPP_API_LEVEL > 330
    position = inFrame.position;
    #else
    // Must copy the pointer values
+   className =  inFrame.position->className;
+   functionName =  inFrame.position->functionName;
+   fileName =  inFrame.position->fileName;
+   #endif
+
+   #else
    className =  inFrame.position->className;
    functionName =  inFrame.position->functionName;
    fileName =  inFrame.position->fileName;
@@ -418,12 +428,18 @@ ExceptionStackFrame::ExceptionStackFrame(const StackFrame &inFrame)
    int line=0;
    #endif
 
+   // TiVo fix -- these values were already saved in the ExceptionStackFrame
+   // by the modifications in the ExceptionStackFrame constructor above
+   #if 0
+   
    #if HXCPP_API_LEVEL > 330
    const char *fileName = position->fileName;
    const char *className = position->className;
    const char *functionName = position->functionName;
    #endif
-
+   
+   #endif
+   
    return FormatStack(fileName, className, functionName, line, inForDisplay);
 }
 
