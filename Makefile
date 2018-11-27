@@ -96,7 +96,7 @@ $(HAXELIB_STAGED_DIR)/hxcpp.n: $(STAGE_HAXELIB_TARGET) tools/hxcpp
 .PHONY: BuildLibs
 BuildLibs: BuildBuildN BuildHxcppN BuildRunN
 	@$(ECHO) -n "$(ISMCOLOR)$(ISM_NAME)$(UNCOLOR): "; \
-	$(ECHO) "$(COLOR)Rebuilding hxcpp libs for $(HAXE_HOST_SYSTEM)$(UNCOLOR)";
+	$(ECHO) "$(COLOR)Rebuilding hxcpp libs for $(HAXE_HOST_SYSTEM) in $(HAXELIB_STAGED_DIR)/project $(UNCOLOR)";
 	$(Q) cd $(HAXELIB_STAGED_DIR)/project; \
       neko $(HAXELIB_STAGED_DIR)/build.n \
            $(HAXE_HOST_SYSTEM)-m$(HAXE_HOST_BITS) -DHXCPP_VERBOSE=1 \

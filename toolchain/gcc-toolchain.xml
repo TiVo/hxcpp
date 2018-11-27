@@ -15,6 +15,7 @@
   <fromfile value="" if="blackberry" />
   <outflag value="-cr "/>
   <outflag value="cr " if="emscripten" />
+  <outflag value="-csr " if="HXCPP_CLANG" />
   <section if="HXCPP_USE_LIBTOOL">
      <exe name="libtool"  />
      <exe name="${HXCPP_LIBTOOL}" if="HXCPP_LIBTOOL" />
@@ -27,7 +28,7 @@
   <expandAr value="1" if="android" />
   <expandAr value="1" if="emscripten" />
   <expandAr value="1" if="linux" />
-  <section unless="HXCPP_USE_LIBTOOL">
+  <section unless="HXCPP_USE_LIBTOOL || HXCPP_CLANG">
      <ranlib name="ranlib" />
      <ranlib name="${EXEPREFIX}-ranlib" if="EXEPREFIX" />
      <ranlib name="${HXCPP_RANLIB}" if="HXCPP_RANLIB" />
