@@ -12,6 +12,8 @@
 
   <compilerflag value="-I${ZLIB_DIR}"/>
 
+  <compilerflag value="-DZ_HAVE_UNISTD_H" if="iphoneos || iphonesim || appletvos || appletvsim" />
+
   <file name="ZLib.cpp"/>
 
   <section unless="HXCPP_LINK_NO_ZLIB" >
