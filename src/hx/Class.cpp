@@ -1,11 +1,7 @@
 #include <hxcpp.h>
 #include <string>
 
-#ifdef USE_STD_MAP
-#include <map>
-#else
-#include <tr1/unordered_map>
-#endif
+#include <hx/Unordered.h>
 
 #ifdef ANDROID
 #include <android/log.h>
@@ -14,11 +10,7 @@
 
 namespace hx
 {
-#ifdef USE_STD_MAP
-typedef std::map<std::string,Class> ClassMap;
-#else
-typedef std::tr1::unordered_map<std::string,Class> ClassMap;
-#endif
+typedef UnorderedMap<std::string,Class> ClassMap;
 static ClassMap *sClassMap = 0;
 
 Class _hx_RegisterClass(const String &inClassName, CanCastFunc inCanCast,

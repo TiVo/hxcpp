@@ -1,12 +1,6 @@
 #include <hxcpp.h>
 #include <list>
 
-#ifdef USE_STD_MAP
-#include <map>
-#else
-#include <tr1/unordered_map>
-#endif
-
 #include <vector>
 #include <string>
 #include <hx/Debug.h>

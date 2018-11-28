@@ -3,14 +3,10 @@
 #include <stdio.h>
 #include <string>
 
-#ifdef USE_STD_MAP
-#include <map>
-#else
-#include <tr1/unordered_map>
-#endif
-
 #include <vector>
 #include <stdlib.h>
+
+#include <hx/Unordered.h>
 
 #ifdef ANDROID
 #include <android/log.h>
@@ -106,22 +102,10 @@ void hxFreeLibrary(Module inModule) { dlclose(inModule); }
 
 #endif
 
-#ifdef USE_STD_MAP
-
 #ifdef HX_UTF8_STRINGS
-typedef std::map<std::string,Module> LoadedModule;
+typedef hx::UnorderedMap<std::string,Module> LoadedModule;
 #else
-typedef std::map<std::wstring,Module> LoadedModule;
-#endif
-
-#else
-
-#ifdef HX_UTF8_STRINGS
-typedef std::tr1::unordered_map<std::string,Module> LoadedModule;
-#else
-typedef std::tr1::unordered_map<std::wstring,Module> LoadedModule;
-#endif
-
+typedef hx::UnorderedMap<std::wstring,Module> LoadedModule;
 #endif
 
 static LoadedModule sgLoadedModule;
@@ -313,11 +297,7 @@ public:
 namespace
 {
 
-#ifdef USE_STD_MAP
-typedef std::map<String,ExternalPrimitive *> LoadedMap;
-#else
-typedef std::tr1::unordered_map<std::string,ExternalPrimitive *> LoadedMap;
-#endif
+typedef hx::UnorderedMap<std::string,ExternalPrimitive *> LoadedMap;
 LoadedMap sLoadedMap;
 }
 
@@ -473,11 +453,7 @@ static String FindHaxelib(String inLib)
 #endif // HXCPP_TRY_HAXELIB
 
 
-#ifdef USE_STD_MAP
-typedef std::map<std::string,void *> RegistrationMap;
-#else
-typedef std::tr1::unordered_map<std::string,void *> RegistrationMap;
-#endif
+typedef hx::UnorderedMap<std::string,void *> RegistrationMap;
 
 RegistrationMap *sgRegisteredPrims=0;
 

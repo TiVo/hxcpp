@@ -28,11 +28,7 @@ typedef int64_t __int64;
 #include <string>
 #include <vector>
 
-#ifdef USE_STD_MAP
-#include <map>
-#else
-#include <tr1/unordered_map>
-#endif
+#include <hx/Unordered.h>
 
 #include <stdio.h>
 #include <time.h>
@@ -753,11 +749,7 @@ Dynamic __hxcpp_create_var_args(Dynamic &inArrayFunc)
 
 static HxMutex sgFieldMapMutex;
 
-#ifdef USE_STD_MAP
-typedef std::map<std::string,int> StringToField;
-#else
-typedef std::tr1::unordered_map<std::string,int> StringToField;
-#endif
+typedef hx::UnorderedMap<std::string,int> StringToField;
 
 // These need to be pointers because of the unknown order of static object construction.
 String *sgFieldToString=0;

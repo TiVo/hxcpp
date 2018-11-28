@@ -83,16 +83,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#if (defined HX_MACOS || defined APPLETV || defined IPHONE)
-#define USE_STD_MAP
-#else
-#include <tr1/unordered_map>
-#endif
 #include <unistd.h>
 #include <vector>
 
 #include "hxcpp.h"
 #include "hx/GC.h"
+#include "hx/Unordered.h"
 #include "Hash.h"
 
 
@@ -110,14 +106,6 @@
 
 #ifdef TIVO_STB
 #include <stx/StxProcessLog.h>
-#endif
-
-
-// Mac OS X implementation of std::tr1::unordered_map is buggy?
-#ifdef USE_STD_MAP
-#define STD_MAP std::map
-#else
-#define STD_MAP std::tr1::unordered_map
 #endif
 
 
@@ -335,7 +323,7 @@ static uint64_t nowUs()
 // This is the next id to assign to objects.  It is protected by g_lock.
 static int g_next_id = 1;
 // This is the mapping of ids to objects.  It is protected by g_lock.
-static STD_MAP<int, uintptr_t> g_id_map;
+static hx::UnorderedMap<int, uintptr_t> g_id_map;
 #endif
 
 // These are explicitly declared root objects; hxcpp doesn't really seem to
@@ -364,7 +352,7 @@ static bool g_gc_in_progress;
 
 #ifdef TIVOCONFIG_GC_ENABLE_DEBUGGING
 static int g_alloc_count;
-static STD_MAP<uint32_t, uint32_t> g_size_statistics;
+static hx::UnorderedMap<uint32_t, uint32_t> g_size_statistics;
 // Debugging timestamps are reported relative to the first instant that the
 // GC initializes, in order to keep the value small (< 32 bits)
 static uint64_t g_zero_time_us;
@@ -1892,11 +1880,11 @@ static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t g_cond = PTHREAD_COND_INITIALIZER;
 
 // This maps allocations to the weak refs to them.  Protected by g_lock.
-static STD_MAP<void *, std::list<GCWeakRef *> > g_weak_ref_map;
+static hx::UnorderedMap<void *, std::list<GCWeakRef *> > g_weak_ref_map;
 
 // This maps objects to finalizer data - it is expected that very few
 // finalizers will be used
-static STD_MAP<hx::Object *, FinalizerData> g_finalizers;
+static hx::UnorderedMap<hx::Object *, FinalizerData> g_finalizers;
 
 // Hxcpp includes a "weak hash" class that needs GC-side support
 static std::list<hx::HashBase<Dynamic> *> g_weak_hash_list;
@@ -2008,16 +1996,8 @@ static void RunFinalizer(hx::Object *obj)
 // threads, so no locking is necessary
 static void HandleWeakRefs()
 {
-#ifdef USE_STD_MAP
-    std::map<void *, std::list<GCWeakRef *> >::iterator iter =
+    hx::UnorderedMap<void *, std::list<GCWeakRef *> >::iterator iter =
         g_weak_ref_map.begin();
-    // Must accumulate elements to remove since the iterator cannot be
-    // disturbed in pre-C++11 (such as Mac OS X)
-    std::list<void *> removeList;
-#else
-    std::tr1::unordered_map<void *, std::list<GCWeakRef *> >::iterator iter =
-        g_weak_ref_map.begin();
-#endif
 
     while (iter != g_weak_ref_map.end()) {
         Entry *entry = ENTRY_FROM_PTR(iter->first);
@@ -2031,28 +2011,15 @@ static void HandleWeakRefs()
         while (iter2 != refs.end()) {
             (*iter2++)->mRef.mPtr = 0;
         }
-#ifdef USE_STD_MAP
-        removeList.push_back(iter->first);
-        iter++;
-#else
         iter = g_weak_ref_map.erase(iter);
-#endif
     }
-
-#ifdef USE_STD_MAP
-    std::list<void *>::iterator removeIter = removeList.begin();
-    while (removeIter != removeList.end()) {
-        g_weak_ref_map.erase(*removeIter);
-        removeIter++;
-    }
-#endif
 }
 
 
 static void RemoveWeakRef(GCWeakRef *wr)
 {
     void *ptr = wr->mRef.mPtr;
-    STD_MAP<void *, std::list<GCWeakRef *> >::iterator iter = 
+    hx::UnorderedMap<void *, std::list<GCWeakRef *> >::iterator iter = 
         g_weak_ref_map.find(ptr);
     if (iter == g_weak_ref_map.end()) {
         return;
@@ -2072,7 +2039,7 @@ static void HandleFinalizers()
     std::list<hx::Object *> torun;
 
     {
-        STD_MAP<hx::Object *, FinalizerData>::iterator it =
+        hx::UnorderedMap<hx::Object *, FinalizerData>::iterator it =
             g_finalizers.begin();
         while (it != g_finalizers.end()) {
             if ((FLAGS_OF_ENTRY(ENTRY_FROM_PTR(it->first)) & LAST_MARK_MASK)
@@ -2510,7 +2477,7 @@ hx::Object *__hxcpp_id_obj(int id)
 
     Lock();
     
-    STD_MAP<int, uintptr_t>::iterator i = g_id_map.find(id);
+    hx::UnorderedMap<int, uintptr_t>::iterator i = g_id_map.find(id);
 
     hx::Object *ret = (i == g_id_map.end()) ? 0 : (hx::Object *) (i->second);
 
@@ -2779,7 +2746,7 @@ struct AllocDetails
 
 static bool g_dump_on_gc;
 static int g_debug_socket = -1;
-static STD_MAP<void *, AllocDetails> g_details;
+static hx::UnorderedMap<void *, AllocDetails> g_details;
 
 // These are loaded once.  They are just all of the ranges of mapped memory
 // regions of the process.
