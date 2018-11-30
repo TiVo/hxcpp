@@ -42,7 +42,4 @@
  <flag value="-D_TIVO_" if="tivo" tag="haxe" />
  <mmflag value='-Wno-invalid-offsetof' />
  <mmflag value='-Wno-format-security' />
- <!-- Define HXCPP_USE_TIVO_GC when compiling all code if HXCPP_USE_TIVO_GC
-	  is defined in the project -->
- <flag value='-DHXCPP_USE_TIVO_GC' if="HXCPP_USE_TIVO_GC" tag="haxe,gc" />
 </xml>

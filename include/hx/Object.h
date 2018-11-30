@@ -157,35 +157,8 @@ public:
    enum { _hx_ClassId = hx::clsIdDynamic };
 
 
-#ifdef HXCPP_USE_TIVO_GC
    // These allocate the function using the garbage-colleced malloc
    void *operator new( size_t inSize, bool inContainer=true, const char *inName=0 );
-#else
-   // These allocate the function using the garbage-colleced malloc
-   inline void *operator new( size_t inSize, bool inContainer=true, const char *inName=0 )
-   {
-      #ifdef HX_USE_INLINE_IMMIX_OPERATOR_NEW
-         ImmixAllocator *alloc =  hx::gMultiThreadMode ? tlsStackContext : gMainThreadContext;
-
-         #ifdef HXCPP_DEBUG
-         if (!alloc)
-            BadImmixAlloc();
-         #endif
-
-         return ImmixAllocator::alloc(alloc, inSize, inContainer, inName);
-
-      #else // Not HX_USE_INLINE_IMMIX_OPERATOR_NEW ...
-
-         void *result = hx::InternalNew(inSize,inContainer);
-
-         #ifdef HXCPP_TELEMETRY
-            __hxt_gc_new(result, inSize, inName);
-         #endif
-         return result;
-      #endif
-   }
-#endif
-
    inline void *operator new( size_t inSize, hx::NewObjectType inType,  const char *inName=0 )
    {
       if (inType==NewObjConst)

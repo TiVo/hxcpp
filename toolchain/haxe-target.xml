@@ -134,7 +134,6 @@
 
   <precompiledheader name="hxcpp" dir="${HXCPP}/include" />
 
-  <compilerflag value="-DHXCPP_SINGLE_THREADED_APP" if="HXCPP_SINGLE_THREADED_APP" tags="haxe,gc" />
   <compilerflag value="-DTIVOCONFIG_GC_BLOCK_SIZE=${TIVOCONFIG_GC_BLOCK_SIZE}" if="TIVOCONFIG_GC_BLOCK_SIZE" tags="haxe,gc" />
   <compilerflag value="-DTIVOCONFIG_GC_ALLOC_0_SIZE=${TIVOCONFIG_GC_ALLOC_0_SIZE}" if="TIVOCONFIG_GC_ALLOC_0_SIZE" tags="haxe,gc" />
   <compilerflag value="-DTIVOCONFIG_GC_ALLOC_1_SIZE=${TIVOCONFIG_GC_ALLOC_1_SIZE}" if="TIVOCONFIG_GC_ALLOC_1_SIZE" tags="haxe,gc" />
@@ -152,11 +151,10 @@
   <file name = "src/hx/CFFI.cpp" tags="haxe,static" />
   <file name = "src/hx/Date.cpp"/>
   <file name = "src/hx/gc/GcCommon.cpp" tags="haxe,gc" />
-  <file name = "src/hx/gc/Immix.cpp" unless="HXCPP_USE_TIVO_GC" tags="haxe,gc" />
-  <file name = "src/hx/gc/GcRegCapture.cpp" unless="HXCPP_USE_TIVO_GC" tags="haxe,gc" />
   <!-- XXX At TiVo we have our own multi-endian supporting GC -->
-  <file name = "src/hx/GCPooledV2.cpp" if="HXCPP_USE_TIVO_GC" unless="HXCPP_USE_GCPOOLEDV3" tags="haxe,gc" />
-  <file name = "src/hx/GCPooledV3.cpp" if="HXCPP_USE_TIVO_GC HXCPP_USE_GCPOOLEDV3" tags="haxe,gc" />
+  <!-- <file name = "src/hx/gc/Immix.cpp" tags="haxe,gc" />
+  <file name = "src/hx/gc/GcRegCapture.cpp" tags="haxe,gc" /> -->
+  <file name = "src/hx/GCPooledV3.cpp" tags="haxe,gc" />
   <file name = "src/hx/Hash.cpp"/>
   <file name = "src/hx/Interface.cpp"/>
   <file name = "src/hx/Lib.cpp" tags="haxe,static" />

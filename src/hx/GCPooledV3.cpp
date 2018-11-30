@@ -48,8 +48,9 @@
 //     pool.  Must be greater than or equal to HXCPP_GC_ALLOC_2_SIZE.
 //     Defaults to 64 bytes.
 //
-// TIVOCONFIG_GC_THREAD_COUNT -- this number of threads will be used to
-//     perform the GC.  Defaults to 2.
+// TIVOCONFIG_GC_THREAD_COUNT -- this number of threads (beyond the haxe
+//     thread that initiated GC itself) that will be used to perform the GC.
+//     Defaults to 2.
 //
 // TIVOCONFIG_GC_COLLECT_SIZE -- number of bytes that can be allocated before
 //     a system-wide GC is performed.  Note that the larger this is made, the
@@ -88,6 +89,7 @@
 
 #include "hxcpp.h"
 #include "hx/GC.h"
+#include "hx/StackContext.h"
 #include "hx/Unordered.h"
 #include "Hash.h"
 
@@ -304,7 +306,7 @@ static uint64_t nowUs()
 // Get a reference to the flags of an entry.  Must be done this way because
 // hxcpp requires the flags to be 4 bytes before the data.
 #define FLAGS_OF_ENTRY(entry) \
-    (*((uint32_t *) (((uint32_t) ((entry)->bytes)) - 4)))
+    (*((uint32_t *) (((uintptr_t) ((entry)->bytes)) - 4)))
 
 // Declares a block manager for a particular size allocation
 #define BlockManagerType(size, flag)                                         \
@@ -895,6 +897,24 @@ static BlockManagerType(TIVOCONFIG_GC_ALLOC_3_SIZE,
                         IN_ALLOCATOR_3_FLAG) gBlockManager3;
 #endif
 
+// Must declare this stupid thing
+class ImmixAllocatorIsStupid : public hx::StackContext
+{
+public:
+
+    ImmixAllocatorIsStupid() { }
+
+    virtual ~ImmixAllocatorIsStupid() { }
+
+    void *CallAlloc(int inSize, unsigned int inObjectFlags)
+    {
+        return hx::InternalNew
+            (inSize, inObjectFlags & IMMIX_ALLOC_IS_CONTAINER);
+    }
+
+    void SetupStack() { }
+};
+
 
 class HaxeThread
 {
@@ -949,11 +969,9 @@ public:
 #endif
             // This is the first HaxeThread ... need to have the key
             pthread_key_create(&gInfoKey, 0);
-            // And create the GC threads if necessary.  Create one less than
-            // the total GC thread count because the haxe thread initiating GC
-            // counts too.
-#if (TIVOCONFIG_GC_THREAD_COUNT > 2)
-            for (int i = 1; i < TIVOCONFIG_GC_THREAD_COUNT; i++) {
+            // And create the GC threads if necessary.
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+            for (int i = 0; i < TIVOCONFIG_GC_THREAD_COUNT; i++) {
                 pthread_t junk;
                 pthread_create(&junk, 0, &GCTaskThreadMain, 0);
             }
@@ -966,7 +984,17 @@ public:
         mNext = gHead;
         gHead = this;
 
+        // Must create the StackContext thing for this thread
+        mImmixIsStupid = new ImmixAllocatorIsStupid();
+        hx::tlsStackContext = mImmixIsStupid;
+
         pthread_mutex_unlock(&gHeadMutex);
+    }
+
+    ~HaxeThread()
+    {
+        // Delete the StackContext thing for this thread
+        delete mImmixIsStupid;
     }
 
     inline void Unregister()
@@ -1335,7 +1363,7 @@ private:
         mLargeAllocator.MergeInto(live->mLargeAllocator);
     }
 
-#if (TIVOCONFIG_GC_THREAD_COUNT == 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT == 0)
     
     static void PerformGC()
     {
@@ -1464,7 +1492,7 @@ private:
         pthread_cond_broadcast(&gCollectDoneCond);
     }
 
-#else // TIVOCONFIG_GC_THREAD_COUNT > 1
+#else // TIVOCONFIG_GC_THREAD_COUNT > 0
 
     // Types of mark task to perform
     enum MarkTaskType
@@ -1829,6 +1857,9 @@ private:
 #endif
     LargeAllocator mLargeAllocator;
 
+    // hxcpp foolishness
+    hx::StackContext *mImmixIsStupid;
+
     // The pthread key that is used to look up an instance of ThreadGlobalData
     // for each thread
     static pthread_key_t gInfoKey;
@@ -1846,7 +1877,7 @@ private:
     static pthread_mutex_t gGcMutex;
     static pthread_cond_t gCollectDoneCond;
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     // Stack of mark tasks to perform
     static std::list<MarkTask> gMarkTasks;
     // Stack of sweep tasks to perform
@@ -1896,7 +1927,7 @@ uint32_t HaxeThread::gActiveThreadCount;
 pthread_mutex_t HaxeThread::gHeadMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t HaxeThread::gGcMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t HaxeThread::gCollectDoneCond = PTHREAD_COND_INITIALIZER;
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
 std::list<HaxeThread::MarkTask> HaxeThread::gMarkTasks;
 std::list<HaxeThread::SweepTask> HaxeThread::gSweepTasks;
 uint32_t HaxeThread::gOutstandingTaskCount;
@@ -2092,7 +2123,7 @@ static void MarkWeakHashes()
 }
 
 
-static void *Calloc(size_t nmemb, uint32_t size)
+static void *Calloc(size_t nmemb, size_t size)
 {
     void *ret = calloc(nmemb, size);
 
@@ -2374,7 +2405,10 @@ void *hx::InternalNew(int inSize, bool inIsObject)
 }
 
 
-void *hx::InternalRealloc(void *ptr, int new_size)
+namespace hx
+{
+
+void *InternalRealloc(void *ptr, int new_size, bool)
 {
     void *ret = (HaxeThread::Get(true))->Reallocate(ptr, new_size);
 
@@ -2386,7 +2420,7 @@ void *hx::InternalRealloc(void *ptr, int new_size)
 }
 
 
-void *hx::Object::operator new(size_t inSize, bool inIsObject, const char *)
+void *Object::operator new(size_t inSize, bool inIsObject, const char *)
 {
     void *ret = (HaxeThread::Get(true))->Allocate(inSize, inIsObject);
     
@@ -2400,11 +2434,51 @@ void *hx::Object::operator new(size_t inSize, bool inIsObject, const char *)
 }
 
 
+unsigned int ObjectSizeSafe(void *inData)
+{
+    Entry *entry = ENTRY_FROM_PTR(inData);
+
+    if (false) {
+    }
+    #if USE_ALLOCATOR_0
+    if (entry->flags_spacing & IN_ALLOCATOR_0_FLAG) {
+        return TIVOCONFIG_GC_ALLOC_0_SIZE;
+    }
+    #endif
+    #if USE_ALLOCATOR_1
+    else if (entry->flags_spacing & IN_ALLOCATOR_1_FLAG) {
+        return TIVOCONFIG_GC_ALLOC_1_SIZE;
+    }
+    #endif
+    #if USE_ALLOCATOR_2
+    else if (entry->flags_spacing & IN_ALLOCATOR_2_FLAG) {
+        return TIVOCONFIG_GC_ALLOC_2_SIZE;
+    }
+    #endif
+    #if USE_ALLOCATOR_3
+    else if (entry->flags_spacing & IN_ALLOCATOR_3_FLAG) {
+        return TIVOCONFIG_GC_ALLOC_3_SIZE;
+    }
+    #endif
+    else {
+        return LARGE_ENTRY_FROM_PTR(inData)->size;
+    }
+}
+
+}
+
+
 /**** hxcpp public functions *********************************************** */
 
 void __hxcpp_set_finalizer(Dynamic inObject, void *inFinalizer)
 {
     SetFinalizer(inObject.mPtr, 0, 0, (HaxeFinalizer) inFinalizer);
+}
+
+
+void _hx_set_finalizer(Dynamic inObject, HaxeFinalizer inFinalizer)
+{
+    SetFinalizer(inObject.mPtr, 0, 0, inFinalizer);
 }
 
 
@@ -2439,7 +2513,7 @@ hx::Object *__hxcpp_weak_ref_get(Dynamic inRef)
 // unique identifier for a pointer is required.
 int __hxcpp_obj_id(Dynamic inObj)
 {
-    uintptr_t ptr = (uintptr_t) inObj->__GetRealObject();
+    uintptr_t ptr = (uintptr_t) inObj.mPtr;
     if (ptr == 0) {
         return 0;
     }
@@ -2496,7 +2570,7 @@ unsigned int __hxcpp_obj_hash(Dynamic inObj)
         return 0;
     }
 
-    uintptr_t ptr = (uintptr_t) inObj->__GetRealObject();
+    uintptr_t ptr = (uintptr_t) inObj.mPtr;
 
     if (sizeof(ptr) > 4) {
         return (ptr >> 2) ^ (ptr >> 31);
@@ -2538,7 +2612,7 @@ int __hxcpp_gc_used_bytes()
 }
 
 
-int __hxcpp_gc_mem_info(int which)
+double __hxcpp_gc_mem_info(int which)
 {
     switch (which) {
     case 1:
@@ -2641,7 +2715,7 @@ void hx::GCChangeManagedMemory(int, const char *)
 
 static bool debug_write(char *buf, uint32_t size);
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
 static pthread_mutex_t g_write_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
@@ -2995,13 +3069,13 @@ static void debug_alloc(void *ptr, uint32_t size)
 {
     uint32_t timeOffsetMs = (nowUs() - g_zero_time_us) / 1000;
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
     AllocDetails &ad = g_details[ptr];
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_unlock(&g_write_lock);
 #endif
     
@@ -3012,7 +3086,7 @@ static void debug_alloc(void *ptr, uint32_t size)
     ad.frame_count = backtrace
         (ad.frames, (sizeof(ad.frames) / sizeof(ad.frames[0])));
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
@@ -3024,7 +3098,7 @@ static void debug_alloc(void *ptr, uint32_t size)
         g_alloc_count = 0;
     }
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_unlock(&g_write_lock);
 #endif
 }
@@ -3104,13 +3178,13 @@ static void debug_mark(void *ptr, void *ref)
         buf[index++] = (((uint32_t) ref) >>  0) & 0xFF;
     }
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
     debug_write(buf, index);
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_unlock(&g_write_lock);
 #endif
 }
@@ -3118,13 +3192,13 @@ static void debug_mark(void *ptr, void *ref)
 
 static void debug_sweep(void *ptr)
 {
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
     g_details.erase(ptr);
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_unlock(&g_write_lock);
 #endif
 }
@@ -3137,13 +3211,13 @@ static void debug_live(void *ptr)
     }
     
     // Send an allocation record to the debug client
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
     g_details[ptr].dump(ptr, g_debug_socket);
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_unlock(&g_write_lock);
 #endif
 }
@@ -3177,15 +3251,31 @@ static void debug_after_gc(uint32_t mark_us, uint32_t sweep_us,
     buf[index++] = ((total_us >>  8) & 0xFF);
     buf[index++] = ((total_us >>  0) & 0xFF);
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
     debug_write(buf, index);
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
     pthread_mutex_unlock(&g_write_lock);
 #endif
 }
 
 #endif
+
+
+// Extra crap required by StackContext
+namespace hx
+{
+
+bool gMultiThreadMode = true;
+
+// Never used
+StackContext *gMainThreadContext;
+
+// Always used
+DECLARE_FAST_TLS_DATA(StackContext, tlsStackContext);
+
+
+}
