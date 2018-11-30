@@ -28,11 +28,7 @@ typedef int64_t __int64;
 #include <string>
 #include <vector>
 
-#ifdef USE_STD_MAP
-#include <map>
-#else
-#include <tr1/unordered_map>
-#endif
+#include <hx/Unordered.h>
 
 #include <stdio.h>
 #include <time.h>
@@ -271,58 +267,59 @@ void __hxcpp_stdlibs_boot()
 
 void __trace(Dynamic inObj, Dynamic info)
 {
-   String text;
-   if (inObj != null())
-      text = inObj->toString();
-   const char *message = text.__s ? text.__s : "null";
+    String message;
+    const char *filename;
+    int line;
 
-   if (info==null())
-   {
+    if (inObj == null()) {
+        message = String("null");
+    }
+    else {
+        message = inObj->toString();
+        if (message.__s == NULL) {
+            message = String("null");
+        }
+    }
+    
+    if (info == null()) {
+        filename = "?";
+        line = 0;
+    }
+    else {
+        Dynamic d1 = info->__Field(HX_CSTRING("filename"), HX_PROP_DYNAMIC);
+        if (d1 == null()) {
+            filename = "?";
+        }
+        else {
+            filename = d1->toString().__s;
+        }
+        Dynamic d2 = info->__Field(HX_CSTRING("line"), HX_PROP_DYNAMIC);
+        if (d2 == null()) {
+            line = 0;
+        }
+        else {
+            line = d2->__ToInt();
+        }
+    }
+
+    const char *msg = message.c_str();
+
    #ifdef HX_WINRT
-      WINRT_PRINTF("%s\n", message );
+      WINRT_PRINTF("%s:%d: %s\n", filename, line, msg );
    #elif defined(TIZEN)
-      dlog_dprint(DLOG_INFO, "trace","%s\n", message );
+      AppLogInternal(filename, line, "%s\n", msg );
    #elif defined(HX_ANDROID) && !defined(HXCPP_EXE_LINK)
-      __android_log_print(ANDROID_LOG_INFO, "trace","%s",message );
+      __android_log_print(ANDROID_LOG_INFO, "trace","%s:%d: %s",filename, line, msg );
    #elif defined(WEBOS)
-      syslog(LOG_INFO, "%s", message );
-   #elif defined(HX_WINDOWS) && defined(HX_SMART_STRINGS)
-      if (text.isUTF16Encoded())
-         printf("%S\n", (wchar_t *)text.__w );
-      else
-         printf("%s\n", message);
-   #else
-      printf("%s\n", message );
-   #endif
-
-   }
-   else
-   {
-
-      Dynamic d1, d2;
-      d1 = Dynamic((info)->__Field(HX_CSTRING("fileName"), HX_PROP_DYNAMIC));
-      d2 = Dynamic((info)->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC));
-      const char *filename = d1 == null() ? "?" : d1->toString().__s;
-      int line = d1 == null() ? 0 : d2->__ToInt();
-
-   #ifdef HX_WINRT
-      WINRT_PRINTF("%s:%d: %s\n", filename, line, message );
-   #elif defined(TIZEN)
-      AppLogInternal(filename, line, "%s\n", message );
-   #elif defined(HX_ANDROID) && !defined(HXCPP_EXE_LINK)
-      __android_log_print(ANDROID_LOG_INFO, "trace","%s:%d: %s",filename, line, message );
-   #elif defined(WEBOS)
-      syslog(LOG_INFO, "%s:%d: %s", filename, line, message );
+      syslog(LOG_INFO, "%s:%d: %s", filename, line, msg );
    #elif defined(HX_WINDOWS) && defined(HX_SMART_STRINGS)
       if (text.isUTF16Encoded())
          printf("%s:%d: %S\n",filename, line, (wchar_t *)text.__w );
       else
-         printf("%s:%d: %s\n",filename, line, message);
+         printf("%s:%d: %s\n",filename, line, msg );
    #else
-      printf("%s:%d: %s\n",filename, line, message );
+      printf("%s:%d: %s\n",filename, line, msg );
    #endif
-   }
-
 }
 
 void __hxcpp_exit(int inExitCode)
@@ -351,14 +348,10 @@ double  __time_stamp()
          return (now-t0)*period;
    }
    return (double)clock() / ( (double)CLOCKS_PER_SEC);
-#else
-#ifdef HX_LINUX
-    static double t0 = 0;
+#elif defined (HX_LINUX)
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    double t = (ts.tv_sec + (((double) ts.tv_nsec ) * 1e-9));
-    if (t0==0) t0 = t;
-    return t-t0;
+    return (ts.tv_sec + (((double) ts.tv_nsec ) * 1e-9));
 #elif defined(__unix__) || defined(__APPLE__)
    static double t0 = 0;
    struct timeval tv;
@@ -370,13 +363,12 @@ double  __time_stamp()
 #else
    return (double)clock() / ( (double)CLOCKS_PER_SEC);
 #endif
-#endif
 }
 
 #if defined(HX_WINDOWS) && !defined(HX_WINRT)
 
 /*
-ISWHITE and ParseCommandLine are based on the implementation of the
+ISWHITE and ParseCommandLine are based on the implementation of the 
 .NET Core runtime, CoreCLR, which is licensed under the MIT license:
 Copyright (c) Microsoft. All rights reserved.
 See LICENSE file in the CoreCLR project root for full license information.
@@ -401,7 +393,7 @@ static void ParseCommandLine(LPTSTR psrc, Array<String> &out)
        because the program name must be a legal NTFS/HPFS file name.
        Note that the double-quote characters are not copied, nor do they
        contribute to numchars.
-
+         
        This "simplification" is necessary for compatibility reasons even
        though it leads to mishandling of certain cases.  For example,
        "c:\tests\"test.exe will result in an arg0 of c:\tests\ and an
@@ -757,11 +749,7 @@ Dynamic __hxcpp_create_var_args(Dynamic &inArrayFunc)
 
 static HxMutex sgFieldMapMutex;
 
-#ifdef USE_STD_MAP
-typedef std::map<std::string,int> StringToField;
-#else
-typedef std::tr1::unordered_map<std::string,int> StringToField;
-#endif
+typedef hx::UnorderedMap<std::string,int> StringToField;
 
 // These need to be pointers because of the unknown order of static object construction.
 String *sgFieldToString=0;

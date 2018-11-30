@@ -151,7 +151,7 @@ class Compiler
       else if (optimFlags>1)
          Log.error("More than one optimization tag has been set:" + tagFilter);
    }
-      
+
 
    public function getCompilerDefines(inTags:String)
    {
@@ -281,6 +281,7 @@ class Compiler
                //Log.info(""," copy cache for " + obj_name );
                if (!useCacheInPlace)
                   sys.io.File.copy(cacheName, obj_name);
+               if (Log.verbose) Log.info(" use cache for " + obj_name );
                found = true;
             }
          }
@@ -360,10 +361,10 @@ class Compiler
                //throw "Error : " + result + " - build cancelled";
             }
          }
-         
+
          if (cacheName!=null && !useCacheInPlace)
          {
-            Log.info("", " caching " + cacheName);
+            if (Log.verbose) Log.info("", " caching " + cacheName);
             sys.io.File.copy(obj_name, cacheName);
          }
       }

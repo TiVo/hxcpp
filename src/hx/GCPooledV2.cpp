@@ -96,15 +96,12 @@
 #include <string.h>
 #include <time.h>
 #if (defined HX_MACOS || defined APPLETV || defined IPHONE)
-#define USE_STD_MAP
-#else
-#include <tr1/unordered_map>
-#endif
 #include <unistd.h>
 #include <vector>
 
 #include "hxcpp.h"
 #include "hx/GC.h"
+#include "hx/Unordered.h"
 #include "Hash.h"
 
 #ifdef TIVO_STB
@@ -245,13 +242,6 @@ static void clear_stacktrace(void *ptr);
 #endif
 
 
-// Mac OS X implementation of std::tr1::unordered_map is buggy?
-#ifdef USE_STD_MAP
-#define STD_MAP std::map
-#else
-#define STD_MAP std::tr1::unordered_map
-#endif
-
 // Enable process logging only on STB targets
 #ifdef TIVO_STB
 #define PLOG(type, data_len, data) process_log(type, data_len, data)
@@ -310,8 +300,8 @@ static void clear_stacktrace(void *ptr);
 // This is the Object to id mapping; this is unfortunate stuff but the GC API
 // requires it.  Everything in here is protected by g_lock.
 #ifdef HXCPP_M64
-static STD_MAP<uintptr_t, int> g_obj_map;
-static STD_MAP<int, uintptr_t> g_id_map;
+static hx::UnorderedMap<uintptr_t, int> g_obj_map;
+static hx::UnorderedMap<int, uintptr_t> g_id_map;
 static int g_current_id;
 #endif
 
@@ -1192,7 +1182,7 @@ static pthread_cond_t g_cond = PTHREAD_COND_INITIALIZER;
 #endif
 
 // This maps allocations to the weak refs to them.  Protected by g_lock.
-static STD_MAP<void *, std::list<GCWeakRef *> > g_weak_ref_map;
+static hx::UnorderedMap<void *, std::list<GCWeakRef *> > g_weak_ref_map;
 
 // Garbage collection can be temporarily disabled, although it's not clear why
 // this would ever be done.  Start GC disabled until it is ready, this
@@ -1205,7 +1195,7 @@ static Root *g_roots;
 
 // This maps objects to finalizer data - it is expected that very few
 // finalizers will be used
-static STD_MAP<hx::Object *, FinalizerData> g_finalizers;
+static hx::UnorderedMap<hx::Object *, FinalizerData> g_finalizers;
 
 // Hxcpp includes a "weak hash" class that needs GC-side support
 static std::list<hx::HashBase<Dynamic> *> g_weak_hash_list;
@@ -1242,7 +1232,7 @@ static uint32_t g_recent_allocs_frames =
 #ifdef TIVOCONFIG_GC_SIZE_STATISTICS_THRESHOLD
 static uint32_t g_size_statistics_threshold =
     TIVOCONFIG_GC_SIZE_STATISTICS_THRESHOLD;
-static STD_MAP<uint32_t, uint32_t> g_size_statistics;
+static hx::UnorderedMap<uint32_t, uint32_t> g_size_statistics;
 #if !HXCPP_SINGLE_THREADED_APP
 #endif
 #endif
@@ -1449,7 +1439,7 @@ static void check_size_statistics_threshold(uint32_t size)
 
     // Get a sorted list of keys
     std::vector<uint32_t> keys;
-    STD_MAP<uint32_t, uint32_t>::iterator it = g_size_statistics.begin();
+    hx::UnorderedMap<uint32_t, uint32_t>::iterator it = g_size_statistics.begin();
     while (it != g_size_statistics.end()) {
         keys.push_back(it->first);
         total += it->second;
@@ -1624,16 +1614,8 @@ static void RunFinalizer(hx::Object *obj)
 // threads, so no locking is necessary
 static void HandleWeakRefs()
 {
-#ifdef USE_STD_MAP
-    std::map<void *, std::list<GCWeakRef *> >::iterator iter =
+    hx::UnorderedMap<void *, std::list<GCWeakRef *> >::iterator iter =
         g_weak_ref_map.begin();
-    // Must accumulate elements to remove since the iterator cannot be
-    // disturbed in pre-C++11 (such as Mac OS X)
-    std::list<void *> removeList;
-#else
-    std::tr1::unordered_map<void *, std::list<GCWeakRef *> >::iterator iter =
-        g_weak_ref_map.begin();
-#endif
 
     while (iter != g_weak_ref_map.end()) {
         Entry *entry = ENTRY_FROM_PTR(iter->first);
@@ -1666,21 +1648,8 @@ static void HandleWeakRefs()
         while (iter2 != refs.end()) {
             (*iter2++)->mRef.mPtr = 0;
         }
-#ifdef USE_STD_MAP
-        removeList.push_back(iter->first);
-        iter++;
-#else
         iter = g_weak_ref_map.erase(iter);
-#endif
     }
-
-#ifdef USE_STD_MAP
-    std::list<void *>::iterator removeIter = removeList.begin();
-    while (removeIter != removeList.end()) {
-        g_weak_ref_map.erase(*removeIter);
-        removeIter++;
-    }
-#endif
 }
 
 
@@ -1689,7 +1658,7 @@ static void HandleWeakRefs()
 static void RemoveWeakRef(GCWeakRef *wr)
 {
     void *ptr = wr->mRef.mPtr;
-    STD_MAP<void *, std::list<GCWeakRef *> >::iterator iter = 
+    hx::UnorderedMap<void *, std::list<GCWeakRef *> >::iterator iter = 
         g_weak_ref_map.find(ptr);
     if (iter == g_weak_ref_map.end()) {
         return;
@@ -2549,7 +2518,7 @@ void *hx::InternalNew(int inSize, bool inIsObject)
 }
 
 
-void *hx::InternalRealloc(void *ptr, int new_size, bool inExpand)
+void *hx::InternalRealloc(void *ptr, int new_size)
 {
     // If the pointer is null, then this is actually a 'new', and definitely
     // not for an object since objects are never realloc'd
@@ -2626,14 +2595,6 @@ void __hxcpp_set_finalizer(Dynamic inObject, void *inFinalizer)
     SetFinalizer(inObject.mPtr, 0, 0, (HaxeFinalizer) inFinalizer);
 }
 
-void _hx_set_finalizer(Dynamic inObj, void (*inFunc)(Dynamic) )
-{
-	// TODO - not sure this is correct.
-    SetFinalizer(inObj.mPtr, 0, 0, (HaxeFinalizer) *inFunc);
-}
-
-
-
 
 hx::Object *__hxcpp_weak_ref_create(Dynamic inObject)
 {
@@ -2683,7 +2644,7 @@ int __hxcpp_obj_id(Dynamic inObj)
 
     Lock();
     
-    STD_MAP<uintptr_t, int>::iterator i = g_obj_map.find(ptr);
+    hx::UnorderedMap<uintptr_t, int>::iterator i = g_obj_map.find(ptr);
 
     if (i != g_obj_map.end()) {
         Unlock();
@@ -2710,7 +2671,7 @@ hx::Object *__hxcpp_id_obj(int id)
 
     Lock();
     
-    STD_MAP<int, uintptr_t>::iterator i = g_id_map.find(id);
+    hx::UnorderedMap<int, uintptr_t>::iterator i = g_id_map.find(id);
 
     hx::Object *ret = (i == g_id_map.end()) ? 0 : (hx::Object *) (i->second);
 
@@ -2772,16 +2733,16 @@ void __hxcpp_gc_safe_point()
 
 int __hxcpp_gc_used_bytes()
 {
-    return (int) __hxcpp_gc_mem_info(0);
+    return __hxcpp_gc_mem_info(0);
 }
 
 
-double __hxcpp_gc_mem_info(int inWhich)
+int __hxcpp_gc_mem_info(int inWhich)
 {
     if ((inWhich == 0) || (inWhich > 3)) {
         //   MEM_INFO_USAGE - estimate of how much is needed by program (at
         //   last collect)
-        return (double) g_total_after_last_collect;
+        return g_total_after_last_collect;
     }
 
 #ifndef HXCPP_SINGLE_THREADED_APP    
@@ -2842,7 +2803,7 @@ double __hxcpp_gc_mem_info(int inWhich)
     pthread_cond_broadcast(&g_cond);
 #endif
     
-    return (double) total;
+    return total;
 }
 
 

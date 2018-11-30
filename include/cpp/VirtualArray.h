@@ -562,7 +562,11 @@ public:
 // Build dynamic array from foreign array
 template<typename SOURCE_>
 VirtualArray::VirtualArray( const Array<SOURCE_> &inRHS )
-   : super( new VirtualArray_obj( inRHS.mPtr, true) )
+    // Possible fix for HaxeFoundation/hxcpp issue #746.  Using
+    // new VirtualArray_obj... unconditionally means that when inRHS is
+    // a wrapper around a null array, we end up with a non-null empty
+    // array here.  I think that using super(0) in this case is correct.
+    : super( inRHS.mPtr ? new VirtualArray_obj( inRHS.mPtr, true) : 0 )
 {
 }
 
@@ -588,6 +592,9 @@ inline void VirtualArray::setDynamic( const Dynamic &inRHS )
          else
             mPtr = new VirtualArray_obj(dynamic_cast<cpp::ArrayBase_obj *>(ptr), true);
       }
+   }
+   else {
+       mPtr = 0;
    }
 }
 

@@ -36,6 +36,8 @@
 <set name="STD_MODULE_LINK" value="static_link" if="static_link"/>
 <set name="STD_MODULE_LINK" value="exe" if="HXCPP_JS_PRIME"/>
 
+
+
 <set name="LIBEXTRA" value=".iphonesim-64" if="iphonesim"/>
 <set name="LIBEXTRA" value=".iphonesim" if="iphonesim" unless="HXCPP_M64"/>
 <section if="iphoneos">
@@ -113,7 +115,7 @@
       <echo value="Warning: INCREMENTAL requies Visual Studio 2015+"/>
       <!-- without INCREMENTAL -->
       <unset name="HXCPP_OPTIMIZE_LINK_INCREMENTAL"/>
-      <set name="HXCPP_OPTIMIZE_LINK" value="1"/>
+      <set name="HXCPP_OPTIMIZE_LINK" value="1"/> 
       <set name="OBJOPT" value="-opt" if="HXCPP_OPTIMIZE_LINK || HXCPP_OPTIMIZE_LINK_INCREMENTAL" unless="debug" />
       <set name="OBJEXT" value="${M64}${F32}${STAT}${OBJDBG}${OBJOPT}${NOCONSOLE}${RPI}${APIFP}${PRIME}" />
    </section>

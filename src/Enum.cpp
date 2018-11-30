@@ -37,8 +37,12 @@ void EnumBase_obj::__boot()
 #if (HXCPP_API_LEVEL >= 330)
 DynamicArray EnumBase_obj::_hx_getParameters()
 {
+   // TiVo fix -- should never return null here, the caller expects to
+   // get an empty array, not null
+   #if 0
    if (mFixedFields==0)
       return null();
+   #endif
    Array<Dynamic> result = Array_obj<Dynamic>::__new(mFixedFields);
    cpp::Variant *fixed = _hx_getFixed();
    for(int i=0;i<mFixedFields;i++)

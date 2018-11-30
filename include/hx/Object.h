@@ -157,7 +157,10 @@ public:
    enum { _hx_ClassId = hx::clsIdDynamic };
 
 
-#ifdef HXCPP_USE_STOCK_GC
+#ifdef HXCPP_USE_TIVO_GC
+   // These allocate the function using the garbage-colleced malloc
+   void *operator new( size_t inSize, bool inContainer=true, const char *inName=0 );
+#else
    // These allocate the function using the garbage-colleced malloc
    inline void *operator new( size_t inSize, bool inContainer=true, const char *inName=0 )
    {
@@ -181,9 +184,6 @@ public:
          return result;
       #endif
    }
-#else
-   // These allocate the function using the garbage-colleced malloc
-   void *operator new( size_t inSize, bool inContainer=true, const char *inName=0 );
 #endif
 
    inline void *operator new( size_t inSize, hx::NewObjectType inType,  const char *inName=0 )
@@ -234,7 +234,7 @@ public:
    virtual bool __HasField(const String &inString);
    virtual hx::Val __Field(const String &inString, hx::PropertyAccess inCallProp);
 
-   #if (HXCPP_API_LEVEL <= 332)
+   #if (HXCPP_API_LEVEL <= 330)
    virtual bool __Is(hx::Object *inClass) const { return true; }
    virtual hx::Object *__GetRealObject() { return this; }
    bool __Is(Dynamic inClass ) const;

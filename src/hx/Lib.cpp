@@ -2,11 +2,11 @@
 
 #include <stdio.h>
 #include <string>
-#include <map>
-#include <tr1/unordered_map>
 
 #include <vector>
 #include <stdlib.h>
+
+#include <hx/Unordered.h>
 
 #ifdef ANDROID
 #include <android/log.h>
@@ -80,7 +80,6 @@ Module hxLoadLibrary(String inLib)
    #endif
    
    Module result = dlopen(inLib.__CStr(), flags);
-
    if (gLoadDebug)
    {
 #ifdef HX_WINRT
@@ -103,22 +102,10 @@ void hxFreeLibrary(Module inModule) { dlclose(inModule); }
 
 #endif
 
-#ifdef USE_STD_MAP
-
 #ifdef HX_UTF8_STRINGS
-typedef std::map<std::string,Module> LoadedModule;
+typedef hx::UnorderedMap<std::string,Module> LoadedModule;
 #else
-typedef std::map<std::wstring,Module> LoadedModule;
-#endif
-
-#else
-
-#ifdef HX_UTF8_STRINGS
-typedef std::tr1::unordered_map<std::string,Module> LoadedModule;
-#else
-typedef std::tr1::unordered_map<std::wstring,Module> LoadedModule;
-#endif
-
+typedef hx::UnorderedMap<std::wstring,Module> LoadedModule;
 #endif
 
 static LoadedModule sgLoadedModule;
@@ -309,7 +296,8 @@ public:
 
 namespace
 {
-typedef std::map<String,ExternalPrimitive *> LoadedMap;
+
+typedef hx::UnorderedMap<std::string,ExternalPrimitive *> LoadedMap;
 LoadedMap sLoadedMap;
 }
 
@@ -423,7 +411,12 @@ static String FindHaxelib(String inLib)
    char *haxepath_c = strdup(haxepath.c_str());
    char *hp = strtok(haxepath_c, ":");
    while (hp) {
-      String dir = hp + HX_CSTRING("/") + inLib + HX_CSTRING("/");
+      // TiVo fix -- the original code just had "hp + HX_CSTRING..." which
+      // apparently in the new operator overload functions of String turn
+      // into the evaluation of the LHS as a bool value instead of a String,
+      // so fix by making sure to only append String instances
+      String dir = String(hp);
+      dir += HX_CSTRING("/") + inLib + HX_CSTRING("/");
 
       String dev = dir + HX_CSTRING(".dev");
       path = GetFileContents(dev);
@@ -460,11 +453,7 @@ static String FindHaxelib(String inLib)
 #endif // HXCPP_TRY_HAXELIB
 
 
-#ifdef USE_STD_MAP
-typedef std::map<std::string,void *> RegistrationMap;
-#else
-typedef std::tr1::unordered_map<std::string,void *> RegistrationMap;
-#endif
+typedef hx::UnorderedMap<std::string,void *> RegistrationMap;
 
 RegistrationMap *sgRegisteredPrims=0;
 
@@ -873,7 +862,7 @@ Dynamic __loadprim(String inLib, String inPrim,int inArgCount)
    }
 
    String primName = inLib+HX_CSTRING("@")+full_name;
-   ExternalPrimitive *saved = sLoadedMap[primName];
+   ExternalPrimitive *saved = sLoadedMap[primName.c_str()];
    if (saved)
       return Dynamic(saved);
 
@@ -883,7 +872,7 @@ Dynamic __loadprim(String inLib, String inPrim,int inArgCount)
       primName = primName.dupConst();
 
       saved = new ExternalPrimitive(proc,inArgCount,primName);
-      sLoadedMap[primName] = saved;
+      sLoadedMap[primName.c_str()] = saved;
       return Dynamic(saved);
    }
    return null();

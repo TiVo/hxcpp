@@ -9,6 +9,11 @@
 #import <Foundation/Foundation.h>
 #endif
 
+// To support pre-C++11 compilers
+#if __cplusplus <= 199711L
+typedef int16_t char16_t;
+#endif
+
 // --- String --------------------------------------------------------
 //
 // Basic String type for hxcpp.

@@ -254,7 +254,7 @@ char *TConvertToUTF8(const char16_t *inStr, int *ioLen)
    int chars = 0;
    while(s<end)
       chars += UTF8Bytes( Char16Advance( s ) );
- 
+
    char *buf = (char *)NewGCPrivate(0,chars+1);
    char *ptr = buf;
    s = inStr;
@@ -543,7 +543,7 @@ static const T *GCStringDup(const T *inStr,int inLen, int *outLen=0)
       while(inStr[len])
          len++;
    }
-   
+
    if (outLen)
       *outLen = len;
 
@@ -1638,7 +1638,7 @@ String String::substring(int startIndex, Dynamic inEndIndex) const
       startIndex = endIndex;
       endIndex = tmp;
    }
-   
+
    return substr( startIndex, endIndex - startIndex );
 }
 

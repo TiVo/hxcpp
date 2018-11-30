@@ -307,7 +307,7 @@ template<typename T> struct TCast< ObjectPtr<T> >
 template< > struct TCast< cpp::VirtualArray >
 {
    template<typename VAL> static inline cpp::VirtualArray cast(VAL inVal ) {
-      return  cpp::VirtualArray(inVal);
+       return  cpp::VirtualArray(::cpp::Variant(inVal));
    }
 };
 #endif

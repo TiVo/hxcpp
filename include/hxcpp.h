@@ -291,6 +291,7 @@ namespace hx
 {
 class MarkContext;
 
+
 #ifdef HXCPP_VISIT_ALLOCS
 class VisitContext
 {

@@ -133,10 +133,10 @@ class BuildTool
 
 
       if (mDefines.exists("toolchain"))
-      {   
+      {
          if (!mDefines.exists("BINDIR"))
-         {   
-            mDefines.set("BINDIR", Path.withoutDirectory(Path.withoutExtension(mDefines.get("toolchain"))));  
+         {
+            mDefines.set("BINDIR", Path.withoutDirectory(Path.withoutExtension(mDefines.get("toolchain"))));
          }
       }
       else
@@ -185,20 +185,20 @@ class BuildTool
 
          include("toolchain/" + mDefines.get("toolchain") + "-toolchain.xml", false);
 
-      
+
          if (mDefines.exists("HXCPP_CONFIG"))
             include(mDefines.get("HXCPP_CONFIG"),"exes",true);
       }
-      
+
       for(group in mFileGroups)
          group.filter(mDefines);
-      
+
       if (Log.verbose) Log.println ("");
-      
+
       // MSVC needs this before the toolchain file, Emscripten wants to set HXCPP_COMPILE_THREADS
       // If not already calculated in "setup"
       getThreadCount();
-      
+
       var cached = CompileCache.init(mDefines);
 
       Profile.setEntry("setup cache"); 
@@ -244,7 +244,7 @@ class BuildTool
          if (cacheSize!=null && cacheSize>0)
             CompileCache.clear(0,cacheSize,false,null);
       }
-      
+
       if (Log.verbose) Log.println ("");
 
       if (inTargets.remove("clear"))
@@ -313,7 +313,7 @@ class BuildTool
       {
          var thread_var = defs.exists("HXCPP_COMPILE_THREADS") ?
             defs.get("HXCPP_COMPILE_THREADS") : Sys.getEnv("HXCPP_COMPILE_THREADS");
-         
+
          if (thread_var == null)
          {
             sCompileThreadCount = getNumberOfProcesses();
@@ -363,7 +363,7 @@ class BuildTool
 
       for(sub in target.mSubTargets)
          buildTarget(sub,null);
- 
+
       var threadPool = BuildTool.sThreadPool;
 
 
@@ -377,7 +377,7 @@ class BuildTool
       }
 
       targetKey = inTarget + target.getKey();
- 
+
       var objs = new Array<String>();
 
       mCompiler.objToAbsolute();
@@ -907,7 +907,7 @@ class BuildTool
                   {
                      var name = substitute(el.att.files);
                      if (!mFileGroups.exists(name))
-                         Log.error( "Could not find filegroup for depend node:" + name ); 
+                         Log.error( "Could not find filegroup for depend node:" + name );
                      group.addDependFiles(mFileGroups.get(name));
                   }
                   else
@@ -928,12 +928,12 @@ class BuildTool
                      group.mTags=="nvcc";
                case "objprefix" :
                   group.mObjPrefix = substitute(el.att.value);
-               case "compilervalue" : 
+               case "compilervalue" :
                   group.addCompilerFlag( substitute(el.att.name) );
                   group.addCompilerFlag( substitute(el.att.value) );
-               case "precompiledheader" : 
+               case "precompiledheader" :
                   group.setPrecompiled( substitute(el.att.name), substitute(el.att.dir) );
-               case "include" : 
+               case "include" :
                   var subbed_name = substitute(el.att.name);
                   var full_name = findIncludeFile(subbed_name);
                   if (full_name!="")
@@ -946,7 +946,7 @@ class BuildTool
                         createFileGroup(new Fast(xml_slow.firstElement()), group, inName, false,null);
                         popFile();
                      }
-                  } 
+                  }
                   else
                   {
                      Log.error("Could not find include file \"" + subbed_name + "\"");
@@ -1110,7 +1110,7 @@ class BuildTool
                case "files" :
                   var id = el.att.id;
                   if (!mFileGroups.exists(id))
-                     target.addError( "Could not find filegroup " + id ); 
+                     target.addError( "Could not find filegroup " + id );
                   else
                      target.addFiles( mFileGroups.get(id), el.has.asLibrary );
                case "section" : createTarget(el,target,false);
@@ -1126,7 +1126,7 @@ class BuildTool
          return true;
       return mDefines.exists(inString);
    }
- 
+
    public function parseBool(inValue:String):Bool
    {
       return inValue=="1" || inValue=="t" || inValue=="true";
@@ -1172,7 +1172,7 @@ class BuildTool
          result =  Path.normalize( PathManager.combine( mCurrentIncludeFile=="" ? Sys.getCwd() : Path.directory(mCurrentIncludeFile), result ) );
       return result;
    }
-   
+
    private static function getIs64():Bool
    {
       if (isWindows)
@@ -1194,7 +1194,7 @@ class BuildTool
          var error = process.stderr.readAll().toString();
          process.exitCode();
          process.close();
-         
+
          if (output.indexOf("64") > -1)
          {
             return true;
@@ -1222,15 +1222,15 @@ class BuildTool
    {
       var cache = Log.verbose;
       Log.verbose = false;
-      
+
       var result = null;
       if (isWindows)
       {
          var env = Sys.getEnv("NUMBER_OF_PROCESSORS");
          if (env != null)
-         {      
-            result = env;   
-         }   
+         {
+            result = env;
+         }
       }
       else if (isLinux)
       {
@@ -1239,10 +1239,10 @@ class BuildTool
          {
             var cpuinfo = ProcessManager.runProcess("", "cat", [ "/proc/cpuinfo" ], true, false, true, true);
             if (cpuinfo != null)
-            {      
+            {
                var split = cpuinfo.split("processor");
-               result = Std.string(split.length - 1);   
-            }   
+               result = Std.string(split.length - 1);
+            }
          }
       }
       else if (isMac)
@@ -1251,22 +1251,22 @@ class BuildTool
          var output = ProcessManager.runProcess("", "/usr/sbin/system_profiler", [ "-detailLevel", "full", "SPHardwareDataType" ], true, false, true, true);
          if (cores.match(output))
          {
-            result = cores.matched(1); 
+            result = cores.matched(1);
          }
       }
-      
+
       Log.verbose = cache;
-      
+
       if (result == null || Std.parseInt(result) < 1)
-      {   
+      {
          return 1;
       }
       else
-      {   
+      {
          return Std.parseInt(result);
       }
    }
-   
+
    private static function getVersion():String
    {
       try
@@ -1379,10 +1379,7 @@ class BuildTool
       if (defines.exists("HXCPP_NO_COLOUR") || defines.exists("HXCPP_NO_COLOR"))
          Log.colorSupported = false;
       Log.verbose = defines.exists("HXCPP_VERBOSE");
-      // exitOnThreadError = defines.exists("HXCPP_EXIT_ON_ERROR");
-      // OF COURSE we want the compiler to exit on error ... why is this
-      // even an option???
-      exitOnThreadError = true;
+       exitOnThreadError = defines.exists("HXCPP_EXIT_ON_ERROR");
 
 
       os = Sys.systemName();
@@ -1546,7 +1543,7 @@ class BuildTool
          if (FileSystem.exists(path))
             try
             {
-               var contents = sys.io.File.getContent(path); 
+               var contents = sys.io.File.getContent(path);
                if (contents.substr(0,1)!=" ") // Is it New-style?
                   for(def in contents.split("\r").join("").split("\n"))
                   {
@@ -1591,9 +1588,9 @@ class BuildTool
          HXCPP = PathManager.standardize(defines.get("HXCPP"));
          defines.set("HXCPP",HXCPP);
       }
-      
+
       //Log.info("", "HXCPP : " + HXCPP);
-      
+
       include_path.push(".");
       if (env.exists("HOME"))
         include_path.push(env.get("HOME"));
@@ -1606,7 +1603,7 @@ class BuildTool
       //trace(include_path);
 
       //var msvc = false;
-      
+
       // Create alias...
       if (defines.exists("ios"))
       {
@@ -1625,14 +1622,14 @@ class BuildTool
             defines.set("appletvos", "appletvos");
          defines.set("appletv", "appletv");
       }
- 
-     
+
+
 
       if (makefile=="" || Log.verbose)
       {
          printBanner();
       }
-      
+
       if (makefile=="")
       {
          printUsage();
@@ -1694,7 +1691,7 @@ class BuildTool
       Log.println("\x1b[1mhxcpp ("+tivo+" mods) \x1b[0m\x1b[3;37m(Haxe C++ Runtime Support)\x1b[0m \x1b[1m(" + getVersion() + ")\x1b[0m");
       Log.println("");
 #else
-      Log.println("\x1b[33;1m __                          ");             
+      Log.println("\x1b[33;1m __                          ");
       Log.println("/\\ \\                                      ");
       Log.println("\\ \\ \\___    __  _   ___   _____   _____   ");
       Log.println(" \\ \\  _ `\\ /\\ \\/'\\ /'___\\/\\ '__`\\/\\ '__`\\ ");
@@ -2016,7 +2013,7 @@ class BuildTool
                defines.set("TVOS_VER",best);
          }
       }
-      
+
 
       if (defines.exists("applewatch") && !defines.exists("WATCHOS_VER"))
       {
@@ -2066,7 +2063,7 @@ class BuildTool
                Log.v("Could not find MACOSX_VER!");
          }
       }
-      
+
       if (!FileSystem.exists(defines.get("DEVELOPER_DIR") + "/Platforms/MacOSX.platform/Developer/SDKs/"))
       {
          defines.set("LEGACY_MACOSX_SDK","1");
@@ -2081,61 +2078,61 @@ class BuildTool
          {
             switch(el.name)
             {
-               case "set" : 
+               case "set" :
                   var name = substitute(el.att.name);
                   var value = substitute(el.att.value);
                   mDefines.set(name,value);
-               case "unset" : 
+               case "unset" :
                   var name = substitute(el.att.name);
                   mDefines.remove(name);
-               case "setup" : 
+               case "setup" :
                   var name = substitute(el.att.name);
                   Setup.setup(name,mDefines);
-               case "echo" : 
+               case "echo" :
                   Log.info(substitute(el.att.value));
-               case "setenv" : 
+               case "setenv" :
                   var name = substitute(el.att.name);
                   var value = substitute(el.att.value);
                   mDefines.set(name,value);
                   Sys.putEnv(name,value);
-               case "error" : 
+               case "error" :
                   var error = substitute(el.att.value);
                   Log.error(error);
-               case "path" : 
+               case "path" :
                   var path = substitute(el.att.name);
                   Log.info("", " - \x1b[1mAdding path:\x1b[0m " + path);
                   var sep = mDefines.exists("windows_host") ? ";" : ":";
                   var add = path + sep + Sys.getEnv("PATH");
                   Sys.putEnv("PATH", add);
                   //trace(Sys.getEnv("PATH"));
-               case "compiler" : 
+               case "compiler" :
                   mCompiler = createCompiler(el,mCompiler);
-               case "stripper" : 
+               case "stripper" :
                   mStripper = createStripper(el,mStripper);
-               case "prelinker" : 
+               case "prelinker" :
                   var name = substitute(el.att.id);
                   if (mPrelinkers.exists(name))
                      createPrelinker(el,mPrelinkers.get(name));
                   else
                      mPrelinkers.set(name, createPrelinker(el,null) );
-               case "linker" : 
+               case "linker" :
                   var name = substitute(el.att.id);
                   if (mLinkers.exists(name))
                      createLinker(el,mLinkers.get(name));
                   else
                      mLinkers.set(name, createLinker(el,null) );
-               case "files" : 
+               case "files" :
                   var name = substitute(el.att.id);
                   var tags = el.has.tags ? substitute(el.att.tags) : null;
                   if (mFileGroups.exists(name) )
                      createFileGroup(el, mFileGroups.get(name), name, false, tags);
                   else
                      mFileGroups.set(name,createFileGroup(el,null,name, forceRelative,tags));
-               case "include", "import" : 
+               case "include", "import" :
                   var name = substitute(el.att.name);
                   var section = el.has.section ? substitute(el.att.section) : "";
                   include(name, section, el.has.noerror, el.name=="import" );
-               case "target" : 
+               case "target" :
                   var name = substitute(el.att.id);
                   var overwrite = name=="default";
                   if (el.has.overwrite)
@@ -2164,20 +2161,20 @@ class BuildTool
                    to = PathManager.combine( Path.directory(mCurrentIncludeFile), to );
                    copy(from,to);
 
-               case "copyFile" : 
+               case "copyFile" :
                   mCopyFiles.push(
                       new CopyFile(substitute(el.att.name),
                                    substitute(el.att.from),
                                    el.has.allowMissing ?  subBool(el.att.allowMissing) : false,
                                    el.has.overwrite ? substitute(el.att.overwrite) : Overwrite.ALWAYS,
                                    el.has.toolId ?  substitute(el.att.toolId) : null ) );
-               case "section" : 
+               case "section" :
                   parseXML(el,"",forceRelative);
 
-               case "pleaseUpdateHxcppTool" : 
+               case "pleaseUpdateHxcppTool" :
                   checkToolVersion( substitute(el.att.version) );
 
-               case "magiclib" : 
+               case "magiclib" :
                   mMagicLibs.push( {name: substitute(el.att.name),
                                     replace:substitute(el.att.replace) } );
                case "nvccflag" :
@@ -2190,7 +2187,7 @@ class BuildTool
                      mNvccLinkFlags.push( substitute(el.att.name) );
                   mNvccLinkFlags.push( substitute(el.att.value) );
 
-               case "pragma" : 
+               case "pragma" :
                   if (el.has.once)
                      mPragmaOnce.set(mCurrentIncludeFile, parseBool(substitute(el.att.once)));
             }
@@ -2342,7 +2339,7 @@ class BuildTool
    public function valid(inEl:Fast,inSection:String):Bool
    {
       if (inEl.x.get("if") != null)
-      {   
+      {
          var value = inEl.x.get("if");
          var optionalDefines = value.split("||");
          var matchOptional = false;
@@ -2354,12 +2351,12 @@ class BuildTool
             {
                var check = StringTools.trim(required);
                if (check != "" && !defined(check))
-               {   
+               {
                   matchRequired = false;
                }
             }
             if (matchRequired)
-            {   
+            {
                matchOptional = true;
             }
          }
@@ -2368,7 +2365,7 @@ class BuildTool
             return false;
          }
       }
-      
+
       if (inEl.has.unless)
       {
          var value = substitute(inEl.att.unless);
@@ -2396,7 +2393,7 @@ class BuildTool
             return false;
          }
       }
-      
+
       if (inEl.has.unlessApi)
       {
          var value = substitute(inEl.att.unlessApi);
@@ -2410,7 +2407,7 @@ class BuildTool
 
       if (inEl.has.ifExists)
          if (!FileSystem.exists( substitute(inEl.att.ifExists) )) return false;
-      
+
       if (inSection!="")
       {
          if (inEl.name!="section")
@@ -2420,7 +2417,7 @@ class BuildTool
          if (inEl.att.id!=inSection)
             return false;
       }
-      
+
       return true;
    }
 }
