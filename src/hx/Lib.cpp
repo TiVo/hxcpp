@@ -319,6 +319,13 @@ typedef void *(*GetNekoEntryFunc)();
 typedef void (*NekoEntryFunc)();
 
 
+static String GetEnv(const char *inPath)
+{
+   const char *env  = getenv(inPath);
+   String result(env,env?strlen(env):0);
+   return result;
+}
+
 #ifdef HXCPP_TRY_HAXELIB
 
 static String GetFileContents(String inFile)
@@ -347,13 +354,6 @@ static String GetFileContents(String inFile)
        buf[bytes] = '\0';
    }
    return String(buf,strlen(buf)).dup();
-}
-
-static String GetEnv(const char *inPath)
-{
-   const char *env  = getenv(inPath);
-   String result(env,env?strlen(env):0);
-   return result;
 }
 
 static String FindHaxelib(String inLib)
