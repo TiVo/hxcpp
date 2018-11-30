@@ -286,14 +286,14 @@ void __trace(Dynamic inObj, Dynamic info)
         line = 0;
     }
     else {
-        Dynamic d1 = info->__Field(HX_CSTRING("filename"), HX_PROP_DYNAMIC);
+        Dynamic d1 = info->__Field(HX_CSTRING("fileName"), HX_PROP_DYNAMIC);
         if (d1 == null()) {
             filename = "?";
         }
         else {
             filename = d1->toString().__s;
         }
-        Dynamic d2 = info->__Field(HX_CSTRING("line"), HX_PROP_DYNAMIC);
+        Dynamic d2 = info->__Field(HX_CSTRING("lineNumber"), HX_PROP_DYNAMIC);
         if (d2 == null()) {
             line = 0;
         }

@@ -227,8 +227,7 @@ inline bool HxCreateDetachedThread(void *(*func)(void *), void *param)
 #endif
 	if (pthread_create(&t, &attr, func, param) != 0 )
 		return false;
-	if (pthread_attr_destroy(&attr) != 0)
-		return false;
+	pthread_attr_destroy(&attr);
 	return true;
 }
 

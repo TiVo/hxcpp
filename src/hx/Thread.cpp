@@ -229,9 +229,6 @@ THREAD_FUNC_TYPE hxThreadFunc( void *inInfo )
 
 	hx::SetTopOfStack((int *)&info[1], true);
 
-	// Release the creation function
-	info[0]->mSemaphore->Set();
-
     // Call the debugger function to annouce that a thread has been created
     //__hxcpp_dbg_threadCreatedOrTerminated(info[0]->GetThreadNumber(), true);
 
@@ -262,19 +259,11 @@ Dynamic __hxcpp_thread_create(Dynamic inStart)
     int threadNumber = g_nextThreadNumber++;
     g_threadInfoMutex.Unlock();
 
-	hxThreadInfo *info = new hxThreadInfo(inStart, threadNumber);
-
-	hx::GCPrepareMultiThreaded();
-	hx::EnterGCFreeZone();
-
+    hxThreadInfo *info = new hxThreadInfo(inStart, threadNumber);
+    
+    hx::GCPrepareMultiThreaded();
+    
     bool ok = HxCreateDetachedThread(hxThreadFunc, info);
-    if (ok)
-    {
-       info->mSemaphore->Wait();
-    }
-
-    hx::ExitGCFreeZone();
-    info->CleanSemaphore();
 
     if (!ok)
        throw Dynamic( HX_CSTRING("Could not create thread") );
