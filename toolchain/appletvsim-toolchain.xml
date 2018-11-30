@@ -61,6 +61,7 @@
   <include name="toolchain/common-defines.xml" />
   <flag value="-DHXCPP_BIG_ENDIAN" if="HXCPP_BIG_ENDIAN"/>
   <flag value="-I${HXCPP}/include"/>
+  <flag value="-I/usr/local/include"/>
   <!-- Removed for iOS 8 (no need) -->
   <!-- <cppflag value="-frtti"/> -->
 
