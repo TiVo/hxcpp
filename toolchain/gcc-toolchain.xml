@@ -15,6 +15,7 @@
   <fromfile value="" if="blackberry" />
   <outflag value="-cr "/>
   <outflag value="cr " if="emscripten" />
+  <outflag value="-csr " if="HXCPP_CLANG" />
   <section if="HXCPP_USE_LIBTOOL">
      <exe name="libtool"  />
      <exe name="${HXCPP_LIBTOOL}" if="HXCPP_LIBTOOL" />
@@ -27,7 +28,7 @@
   <expandAr value="1" if="android" />
   <expandAr value="1" if="emscripten" />
   <expandAr value="1" if="linux" />
-  <section unless="HXCPP_USE_LIBTOOL">
+  <section unless="HXCPP_USE_LIBTOOL || HXCPP_CLANG">
      <ranlib name="ranlib" />
      <ranlib name="${EXEPREFIX}-ranlib" if="EXEPREFIX" />
      <ranlib name="${HXCPP_RANLIB}" if="HXCPP_RANLIB" />
@@ -38,7 +39,8 @@
 <set name="nostrip" value="1" if="dll_import"/>
 <set name="nostrip" value="1" if="dll_export"/>
 <set name="nostrip" value="1" if="HXCPP_DEBUG_LINK"/>
-
+<!-- TiVo -- Mac OSX stripping not working at the moment -->
+<set name="nostrip" value="1" if="macos"/>
 
 <stripper id="strip" exe="strip" unless="nostrip">
   <exe name="strip"/>
@@ -46,10 +48,13 @@
   <exe name="${EXEPREFIX}-strip" if="EXEPREFIX" />
   <exe name="${HXCPP_STRIP}" if="HXCPP_STRIP" />
   <exe name="mipsel-linux-strip" if="gcw0" />
+  <exe name="${TOOLROOT}/bin/${compiler_arch}-TiVo-linux-gnu${compiler_abi}-strip" if="tivo-stb" />
   <flag value="-u" if="macos"/>
   <flag value="-r" if="macos"/>
   <flag value="-x" if="macos"/>
+  <flag value="-S" if="macos" />
   <flag value="-d" if="linux"/>
+  <flag value="-d" if="tivo"/>
 </stripper>
 
 

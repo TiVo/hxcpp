@@ -151,7 +151,7 @@ class Compiler
       else if (optimFlags>1)
          Log.error("More than one optimization tag has been set:" + tagFilter);
    }
-
+      
 
    public function getCompilerDefines(inTags:String)
    {
@@ -360,7 +360,7 @@ class Compiler
                //throw "Error : " + result + " - build cancelled";
             }
          }
-
+         
          if (cacheName!=null && !useCacheInPlace)
          {
             Log.info("", " caching " + cacheName);
@@ -382,15 +382,25 @@ class Compiler
          {
             command = mExe + " --version";
             versionString = ProcessManager.readStdout(mExe,["--version"]).join(" ");
+            if (versionString == "" || versionString == null)
+            {
+                versionString = ProcessManager.readStderr(mExe,["--version"]).join(" ");
+            }
          }
          else
          {
             command = mGetCompilerVersion;
-            versionString = ProcessManager.readStderr(mGetCompilerVersion,[]).join(" ");
+            versionString = ProcessManager.readStdout(mGetCompilerVersion,[]).join(" ");
+            if (versionString == "" || versionString == null)
+            {
+                versionString = ProcessManager.readStderr(mGetCompilerVersion,[]).join(" ");
+            }
          }
 
          if (versionString=="" || versionString==null)
-            Log.error("Could not deduce compiler version with " + command);
+         {
+             Log.error("Could not deduce compiler version with " + command);
+         }
 
          Log.info("", "Compiler version: " +  versionString);
 

@@ -20,6 +20,23 @@ class Build extends hxcpp.Builder
           parts.pop();
        var hxcppDir = parts.join("/");
 
+#if tivo
+       // build.n must be executed from the "project" directory.  By default
+       // hxcpp will set the CWD to the parent folder (which is the root of
+       // hxcpp) before calling "neko run.n" to simulate a call from haxelib.
+       // 
+       // Since in our case HAXELIB_STAGED_DIR only contains symlinks to hxcpp
+       // in SRCROOT and we need to "cd" into the symlinked "project" folder
+       // to run build.n, we can't set the CWD to the parent since it would
+       // point to the hxcpp folder in SRCROOT.  This would cause neko to fail
+       // to find "run.n" since we built it in HAXELIB_STAGED_DIR.
+       // 
+       // Instead we set the root of hxcpp to the staged hxcpp in OBJROOT
+       if (Sys.getEnv("HAXELIB_STAGED_DIR") != null) {
+           hxcppDir = Sys.getEnv("HAXELIB_STAGED_DIR");
+       }
+#end
+
        // This is how haxelib calls a 'run.n' script...
        Sys.setCwd(hxcppDir);
        args.push(here);

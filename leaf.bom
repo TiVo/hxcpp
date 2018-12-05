@@ -1,0 +1,9 @@
+
+######################################################################
+#
+# HXCPP standard libraries built directly from C++ source
+#
+
+f 0644 root root usr/lib/haxe/regexp.${NATIVE_LIB_EXTENSION} ${HAXELIB_STAGED_DIR}/bin/${NATIVE_NDLL_SUBDIR}/regexp.${NATIVE_LIB_EXTENSION} package=jpm-lib arch=all dest=sdk version=haxe_encore
+f 0644 root root usr/lib/haxe/std.${NATIVE_LIB_EXTENSION} ${HAXELIB_STAGED_DIR}/bin/${NATIVE_NDLL_SUBDIR}/std.${NATIVE_LIB_EXTENSION} package=jpm-lib arch=all dest=sdk version=haxe_encore
+f 0644 root root usr/lib/haxe/zlib.${NATIVE_LIB_EXTENSION} ${HAXELIB_STAGED_DIR}/bin/${NATIVE_NDLL_SUBDIR}/zlib.${NATIVE_LIB_EXTENSION} package=jpm-lib arch=all dest=sdk version=haxe_encore

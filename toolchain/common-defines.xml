@@ -5,7 +5,12 @@
  <flag value="-DHXCPP_ARM64" if="HXCPP_ARM64"/>
  <flag value="-DHXCPP_ARMV7" if="HXCPP_ARMV7"/>
  <flag value="-DHXCPP_M64" if="HXCPP_M64||HXCPP_ARM64"/>
- <flag value="-DHXCPP_VISIT_ALLOCS" tag="haxe" />
+ <!-- TiVo turns off HXCPP_VISIT_ALLOCS, which is not needed and only
+      expands the size of executables unnecessarily -->
+ <!-- <flag value="-DHXCPP_VISIT_ALLOCS" /> -->
+ <!-- set -D_TIVO_ for all TiVo builds, allows C++ code to include
+      #ifdef _TIVO_ for TiVo-specific customizations -->
+ <flag value="-D_TIVO_" if="tivo" />
  <flag value="-Dhaxe_210" if="haxe_210" tag="haxe" />
  <flag value="-DHXCPP_FLOAT32" if="HXCPP_FLOAT32" tag="haxe" />
  <flag value="-DHXCPP_CHECK_POINTER" if="HXCPP_CHECK_POINTER" tag="haxe" />
@@ -17,6 +22,7 @@
  <flag value="-DHXCPP_STACK_VARS" if="HXCPP_STACK_VARS" tag="haxe" />
  <flag value="-DHXCPP_DEBUGGER" if="HXCPP_DEBUGGER" tag="haxe" />
  <flag value="-DHXCPP_PARANOID" if="HXCPP_PARANOID" tag="haxe" />
+ <flag value='-DHXCPP_USE_STOCK_GC' if="HXCPP_USE_STOCK_GC" tag="gc" />
  <flag value="-DHXCPP_GC_MOVING" if="HXCPP_GC_MOVING" tag="gc" />
  <flag value="-DHXCPP_GC_BIG_BLOCKS" if="HXCPP_GC_BIG_BLOCKS" tag="gc" />
  <flag value="-DHXCPP_GC_SUMMARY" if="HXCPP_GC_SUMMARY" tag="gc" />

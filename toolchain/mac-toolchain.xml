@@ -13,6 +13,8 @@
 
 <set name="STDLIBCPP" value="1" unless="HXCPP_GCC || HXCPP_CPP11" />
 
+<set name="HXCPP_CLANG" value="1"/>
+<set name="HXCPP_CPP11" value="1"/>
 
 <compiler id="darwin" exe="g++" if="macos">
   <exe name="xcrun --sdk macosx${MACOSX_VER} clang++" if="HXCPP_CLANG" />
@@ -46,7 +48,8 @@
   <include name="toolchain/common-defines.xml" />
   <flag value="-flto" if="HXCPP_OPTIMIZE_LINK" unless="debug || HXCPP_LTO_THIN"/>
   <flag value="-flto=thin" if="HXCPP_LTO_THIN" unless="debug"/>
-  <objdir value="obj/darwin${OBJEXT}/" />
+  <objdir value="${OBJDIR}" if="OBJDIR" />
+  <objdir value="obj/darwin${OBJEXT}/" unless="OBJDIR" />
   <outflag value="-o"/>
   <ext value=".o"/>
   <getversion value="xcrun --sdk macosx${MACOSX_VER} clang++ -v" if="HXCPP_CLANG" />

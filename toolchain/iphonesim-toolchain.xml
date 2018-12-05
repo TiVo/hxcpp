@@ -9,6 +9,9 @@
 <include name="toolchain/gcc-toolchain.xml"/>
 <!--<path name="${DEVELOPER_DIR}/Platforms/iPhoneSimulator.platform/Developer/usr/bin" />-->
 
+<set name="HXCPP_CLANG" value="1"/>
+<set name="HXCPP_CPP11" value="1"/>
+
 <set name="FORCE_LIBGCC" value="1" if="HXCPP_IOS_STDCPP" unless="HXCPP_GCC" />
 <set name="OBJGCC" value="-c11" if="HXCPP_CPP11" />
 <set name="OBJGCC" value="-gcc" if="HXCPP_GCC" />
@@ -50,6 +53,7 @@
   <flag value="-miphoneos-version-min=5.0"/>
   <flag value="-DIPHONE=IPHONE"/>
   <flag value="-DIPHONESIM=IPHONESIM"/>
+  <flag value="-DUSE_STD_MAP=USE_STD_MAP"/>
   <flag value="-fobjc-arc" if="OBJC_ARC" />
   <flag value="-DOBJC_ARC" if="OBJC_ARC" />
   <flag value="-Wno-parentheses" />
