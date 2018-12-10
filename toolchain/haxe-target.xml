@@ -114,6 +114,18 @@
 
   <compilerflag value="-DHX_UNDEFINE_H" />
 
+  <compilerflag value="-DHXCPP_SINGLE_THREADED_APP" if="HXCPP_SINGLE_THREADED_APP" />
+  <compilerflag value="-DTIVOCONFIG_GC_BLOCK_SIZE=${TIVOCONFIG_GC_BLOCK_SIZE}" if="TIVOCONFIG_GC_BLOCK_SIZE" />
+  <compilerflag value="-DTIVOCONFIG_GC_ALLOC_0_SIZE=${TIVOCONFIG_GC_ALLOC_0_SIZE}" if="TIVOCONFIG_GC_ALLOC_0_SIZE" />
+  <compilerflag value="-DTIVOCONFIG_GC_ALLOC_1_SIZE=${TIVOCONFIG_GC_ALLOC_1_SIZE}" if="TIVOCONFIG_GC_ALLOC_1_SIZE" />
+  <compilerflag value="-DTIVOCONFIG_GC_ALLOC_2_SIZE=${TIVOCONFIG_GC_ALLOC_2_SIZE}" if="TIVOCONFIG_GC_ALLOC_2_SIZE" />
+  <compilerflag value="-DTIVOCONFIG_GC_ALLOC_3_SIZE=${TIVOCONFIG_GC_ALLOC_3_SIZE}" if="TIVOCONFIG_GC_ALLOC_3_SIZE" />
+  <compilerflag value="-DTIVOCONFIG_GC_MIN_COLLECT_SIZE=${TIVOCONFIG_GC_MIN_COLLECT_SIZE}" if="TIVOCONFIG_GC_MIN_COLLECT_SIZE" />
+  <compilerflag value="-DTIVOCONFIG_GC_RECENT_ALLOCS_THRESHOLD=${TIVOCONFIG_GC_RECENT_ALLOCS_THRESHOLD}" if="TIVOCONFIG_GC_RECENT_ALLOCS_THRESHOLD" />
+  <compilerflag value="-DTIVOCONFIG_GC_RECENT_ALLOCS_STACK_FRAME_COUNT=${TIVOCONFIG_GC_RECENT_ALLOCS_STACK_FRAME_COUNT}" if="TIVOCONFIG_GC_RECENT_ALLOCS_STACK_FRAME_COUNT" />
+  <compilerflag value="-DTIVOCONFIG_GC_SIZE_STATISTICS_THRESHOLD=${TIVOCONFIG_GC_SIZE_STATISTICS_THRESHOLD}" if="TIVOCONFIG_GC_SIZE_STATISTICS_THRESHOLD" />
+  <compilerflag value="-DTIVOCONFIG_GC_COLLECT_STACK_TRACES" if="TIVOCONFIG_GC_COLLECT_STACK_TRACES" />
+
   <precompiledheader name="hxcpp" dir="${HXCPP}/include" if="USE_PRECOMPILED_HEADERS"/>
 
   <file name = "src/hx/Anon.cpp"/>
@@ -121,8 +133,11 @@
   <file name = "src/hx/CFFI.cpp"/>
   <file name = "src/hx/Date.cpp"/>
   <file name = "src/hx/gc/GcCommon.cpp"/>
-  <file name = "src/hx/gc/Immix.cpp"/>
-  <file name = "src/hx/gc/GcRegCapture.cpp"/>
+  <file name = "src/hx/gc/Immix.cpp" if="HXCPP_USE_STOCK_GC" />
+  <file name = "src/hx/gc/GcRegCapture.cpp" if="HXCPP_USE_STOCK_GC" />
+  <!-- XXX At TiVo we have our own multi-endian supporting GC -->
+  <file name = "src/hx/GCPooledV2.cpp" unless="HXCPP_USE_STOCK_GC || HXCPP_USE_GCPOOLEDV3" />
+  <file name = "src/hx/GCPooledV3.cpp" unless="HXCPP_USE_STOCK_GC" if="HXCPP_USE_GCPOOLEDV3" />
   <file name = "src/hx/Hash.cpp"/>
   <file name = "src/hx/Interface.cpp"/>
   <file name = "src/hx/Lib.cpp"/>

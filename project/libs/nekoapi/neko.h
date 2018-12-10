@@ -314,6 +314,8 @@ typedef struct _mt_lock mt_lock;
 #define val_compare			neko_val_compare
 #define val_print			neko_val_print
 #define val_gc				neko_val_gc
+#define gc_collect			neko_gc_collect
+#define gc_compact			neko_gc_compact
 #define val_throw			neko_val_throw
 #define val_rethrow			neko_val_rethrow
 #define val_iter_fields		neko_val_iter_fields
@@ -386,6 +388,8 @@ C_FUNCTION_BEGIN
 	EXTERN int val_compare( value a, value b );
 	EXTERN void val_print( value s );
 	EXTERN void val_gc( value v, finalizer f );
+	EXTERN void gc_collect( );
+	EXTERN void gc_compact( );
 	EXTERN void val_throw( value v );
 	EXTERN void val_rethrow( value v );
 	EXTERN int val_hash( value v );

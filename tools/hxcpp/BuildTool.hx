@@ -1223,6 +1223,18 @@ class BuildTool
 
    static function printBanner()
    {
+#if tivo
+      var rst = "\x1b[0m";  var bld = "\x1b[1m";
+      var red = "\x1b[31m"; var grn = "\x1b[32m";
+      var ylw = "\x1b[33m"; var blu = "\x1b[34m";
+      var tivo = red+"T"+grn+"i"+ylw+"V"+blu+"o"+rst;
+      Log.println(bld+" _     _     __    ___   ___      "+red+"_____ "+grn+" _  "+ylw+" _     "+blu+" ___  "+rst);
+      Log.println(bld+"| |_| \\ \\_/ / /'  | |_) | |_)     "+red+" | |  "+grn+"| | "+ylw+"\\ \\  / "+blu+"/ / \\ "+rst);
+      Log.println(bld+"|_| | /_/ \\ \\_\\_, |_|   |_|       "+red+" |_|  "+grn+"|_| "+ylw+" \\_\\/  "+blu+"\\_\\_/ "+rst);
+      Log.println("");
+      Log.println("\x1b[1mhxcpp ("+tivo+" mods) \x1b[0m\x1b[3;37m(Haxe C++ Runtime Support)\x1b[0m \x1b[1m(" + getVersion() + ")\x1b[0m");
+      Log.println("");
+#else
       Log.println("\x1b[33;1m __                          ");             
       Log.println("/\\ \\                                      ");
       Log.println("\\ \\ \\___    __  _   ___   _____   _____   ");
@@ -1235,6 +1247,7 @@ class BuildTool
       Log.println("");
       Log.println("\x1b[1mhxcpp \x1b[0m\x1b[3;37m(Haxe C++ Runtime Support)\x1b[0m \x1b[1m(" + getVersion() + ")\x1b[0m");
       Log.println("");
+#end
    }
 
    function setDefaultToolchain(defines:Hash<String>)
@@ -1332,6 +1345,27 @@ class BuildTool
          defines.set("cygwin","cygwin");
          defines.set("linux","linux");
          defines.set("BINDIR",m64 ? "Cygwin64":"Cygwin");
+      }
+      else if (defines.exists("tivo-stb"))
+      {
+         defines.set("toolchain","tivo");
+         defines.set("tivo","tivo");
+         defines.set("BINDIR", "tivo");
+      }
+      else if (defines.exists("tivo-host"))
+      {
+          set64(defines,m64);
+          defines.set("tivo","tivo");
+          if ( (new EReg("mac","i")).match(os) ) {
+              defines.set("toolchain", "mac");
+              defines.set("macos","macos");
+              defines.set("BINDIR", m64 ? "Mac64" : "Mac");
+          }
+          else {
+              defines.set("toolchain","linux");
+              defines.set("linux","linux");
+              defines.set("BINDIR", m64 ? "Linux64" : "Linux");
+          }
       }
       else if ( (new EReg("window","i")).match(os) )
       {

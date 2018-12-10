@@ -35,7 +35,7 @@
   <files id="std"/>
   <lib name="ws2_32.lib" if="windows" unless="static_link" />
   <lib name="-lsocket" if="blackberry" unless="static_link" />
-  <outdir name="../../../${DESTDIR}/${BINDIR}"/>
+  <outdir name="${PREBINDIR}/${BINDIR}"/>
 </target>
 
 </xml>

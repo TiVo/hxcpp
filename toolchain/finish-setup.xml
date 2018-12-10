@@ -31,8 +31,6 @@
 <set name="STD_MODULE_LINK" value="static_link" if="static_link"/>
 <set name="STD_MODULE_LINK" value="exe" if="HXCPP_JS_PRIME"/>
 
-
-
 <set name="LIBEXTRA" value=".iphonesim-64" if="iphonesim"/>
 <set name="LIBEXTRA" value=".iphonesim" if="iphonesim" unless="HXCPP_M64"/>
 <section if="iphoneos">
@@ -74,8 +72,12 @@
 <set name="NDLLDIR" value="ndll" />
 <set name="NDLLDIR" value="lib" if="static_link" />
 
+<!-- Prepend the HAXELIB_STAGED_DIR (and a slash) if it is set... -->
+<set name="PREBINDIR" value="${HAXELIB_STAGED_DIR}/${DESTDIR}/" if="tivo"/>
+<!-- ...otherwise use '../bin' -->
+<set name="PREBINDIR" value="../${DESTDIR}/" unless="tivo"/>
 
-<set name="IPHONE_VER" value="4.2" unless="IPHONE_VER" />
+<set name="IPHONE_VER" value="10.2" unless="IPHONE_VER" />
 
 <set name="HXCPP_DEBUG_LINK" value="1" if="debug"/>
 

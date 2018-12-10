@@ -126,7 +126,7 @@ class Compiler
             if (FileSystem.exists(cacheName))
             {
                sys.io.File.copy(cacheName, obj_name);
-               Log.info(" use cache for " + obj_name );
+               if (Log.verbose) Log.info(" use cache for " + obj_name );
                found = true;
             }
             else
@@ -175,7 +175,7 @@ class Compiler
          if (cacheName!=null)
          {
             sys.io.File.copy(obj_name, cacheName);
-            Log.info("", " caching " + cacheName);
+            if (Log.verbose) Log.info("", " caching " + cacheName);
          }
       }
 
@@ -193,15 +193,25 @@ class Compiler
          {
             command = mExe + " --version";
             versionString = ProcessManager.readStdout(mExe,["--version"]).join(" ");
+            if (versionString == "" || versionString == null)
+            {
+                versionString = ProcessManager.readStderr(mExe,["--version"]).join(" ");
+            }
          }
          else
          {
             command = mGetCompilerVersion;
-            versionString = ProcessManager.readStderr(mGetCompilerVersion,[]).join(" ");
+            versionString = ProcessManager.readStdout(mGetCompilerVersion,[]).join(" ");
+            if (versionString == "" || versionString == null)
+            {
+                versionString = ProcessManager.readStderr(mGetCompilerVersion,[]).join(" ");
+            }
          }
 
          if (versionString=="" || versionString==null)
-            Log.error("Could not deduce compiler version with " + command);
+         {
+             Log.error("Could not deduce compiler version with " + command);
+         }
 
          Log.info("", "Compiler version: " +  versionString);
 

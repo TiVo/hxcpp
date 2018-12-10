@@ -48,6 +48,7 @@ DEFFUNC_2(value,alloc_wstring_len,const wchar_t *,int)
 
 // Array access - generic
 DEFFUNC_1(value,alloc_array,int)
+DEFFUNC_2(value,alloc_byte_array_from_data,void *,int)
 DEFFUNC_1(int,val_array_size,value)
 DEFFUNC_2(void,val_array_set_size,value,int)
 DEFFUNC_2(value,val_array_i,value,int)
@@ -163,6 +164,7 @@ DEFFUNC_1(void, destroy_root,gcroot)
 DEFFUNC_0(void, gc_enter_blocking)
 DEFFUNC_0(void, gc_exit_blocking)
 DEFFUNC_0(void, gc_safe_point)
+DEFFUNC_0(bool, gc_is_haxe_thread)
 DEFFUNC_2(void, gc_set_top_of_stack,int *,bool)
 
 // Used for finding functions in static libraries

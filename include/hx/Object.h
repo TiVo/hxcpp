@@ -74,6 +74,7 @@ enum NewObjectType
 class HXCPP_EXTERN_CLASS_ATTRIBUTES Object
 {
 public:
+#ifdef HXCPP_USE_STOCK_GC
    // These allocate the function using the garbage-colleced malloc
    inline void *operator new( size_t inSize, bool inContainer=true, const char *inName=0 )
    {
@@ -134,6 +135,10 @@ public:
       #endif
       return result;
    }
+#else
+   // These allocate the function using the garbage-colleced malloc
+   void *operator new( size_t inSize, bool inContainer=true, const char *inName=0 );
+#endif
 
    inline void *operator new( size_t inSize, hx::NewObjectType inType,  const char *inName=0 )
    {
@@ -150,8 +155,14 @@ public:
 
    //virtual void *__root();
    virtual void __Mark(hx::MarkContext *__inCtx) { }
+   // TiVo - don't conditionally include this virtual function because it
+   // can lead to mismatches in vtable layout if some files are compiled with
+   // HXCPP_VISIT_ALLOCS defined and some are not.  The extra cost of an
+   // unused pointer in a vtable isn't worth the hassle of weird runtime bugs.
    #ifdef HXCPP_VISIT_ALLOCS
    virtual void __Visit(hx::VisitContext *__inCtx) { }
+   #else
+   virtual void __Visit(void *) { }
    #endif
    virtual bool __Is(hx::Object *inClass) const { return true; }
    virtual hx::Object *__ToInterface(const hx::type_info &inInterface) { return 0; }

@@ -125,7 +125,8 @@
  <flag value="-Wa,--noexecstack"/>
  <flag value="-O2" unless="debug"/>
  <flag value="-O0" if="debug"/>
- <flag value="-g" if="HXCPP_DEBUG_LINK"/>
+ <!-- uncomment the next line (then, rebuild-reinstall) iff you need to use gdb -->
+ <!-- flag value="-g" if="HXCPP_DEBUG_LINK"/ -->
  <flag value="-DNDEBUG"/>
  <flag value="-DHXCPP_LOAD_DEBUG" if="HXCPP_LOAD_DEBUG"/>
  <flag value="-c"/>
@@ -147,6 +148,7 @@
   <flag value="-nostdlib"/>
   <flag value="-std=c++11" if="HXCPP_CPP11"/>
   <flag value="-Wl,-shared,-Bsymbolic"/>
+  <flag value="-Wl,--long-plt"/>
   <flag value="-Wl,--no-undefined" unless="dll_import" />
   <flag value="-Wl,--unresolved-symbols=ignore-in-object-files" if="dll_import" />
   <flag value="-Wl,-z,noexecstack"/>

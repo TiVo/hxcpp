@@ -1,0 +1,168 @@
+<xml>
+
+<!-- TIVO TOOLS -------------------------------------->
+
+<set name="compiler_arch" value="mips" if="tivo-mips" />
+<set name="compiler_arch" value="mipsel" if="tivo-mipsel" />
+<set name="compiler_arch" value="i686" if="tivo-x86" />
+<set name="compiler_arch" value="arm" if="tivo-arm" />
+<set name="compiler_abi" value="eabi" if="tivo-arm" />
+<set name="compiler_arch" value="aarch64" if="tivo-arm64" />
+
+<!-- anymips is set for any mips flavor -->
+<set name="anymips" value="1" if="tivo-mips" />
+<set name="anymips" value="1" if="tivo-mipsel" />
+
+<!-- anyarm is set for any arm flavor -->
+<set name="anyarm" value="1" if="tivo-arm" />
+<set name="anyarm" value="1" if="tivo-arm64" />
+
+<set name="NOTMK" value="1" if="TOSHIBA_SDK_SYSROOT" />
+
+<include name="toolchain/gcc-toolchain.xml"/>
+
+<compiler id="tivo" exe="invalid" if="tivo">
+  <exe name="${TOOLROOT}/bin/${compiler_arch}-TiVo-linux-gnu${compiler_abi}-g++" />
+  <flag value="-fno-inline" if="tivo-x86" />
+  <flag value="-O0" if="debug" unless="bug_437316" />
+  <flag value="-Os" if="bug_437316" />
+  <flag value="-O3" unless="debug || bug_437316" />
+  <flag value="-fno-strict-aliasing" unless="debug" />
+  <flag value="-fno-strict-aliasing" if="bug_437316" />
+  <!-- Commented out for now in an attempt to work around this compiler error:
+       internal compiler error: in dwarf2out_finish, at dwarf2out.c:14292 -->
+  <!-- <flag value="-g" /> --> <!-- tivo always does -g and strips later -->
+  <flag value="-fmessage-length=0" />
+  <flag value="-mips32" if="anymips" />
+  <flag value="-mtune=5kf" if="anymips" />
+  <flag value="-mbranch-likely" if="anymips" />
+  <flag value="-Wa,--trap" if="anymips" />
+  <flag value="-fdata-sections" unless="debug" />
+  <flag value="-fdata-sections" if="bug_437316" />
+  <flag value="-ffunction-sections" unless="debug"/>
+  <flag value="-ffunction-sections" if="bug_437316" />
+  <flag value="-ffunction-sections" if="HXCPP_APP_CHORDING" />
+  <flag value="-march=armv7-a" if="tivo-arm" />
+  <flag value="-fpic" if="dynamic_link" />
+  <flag value="-fPIC" if="dynamic_link" />
+  <flag value="-pipe" />
+  <flag value="-DDEBUG" if="debug" />
+  <flag value="-DBOOTARCH=MIPS" if="anymips" />
+  <flag value="-DBOOTARCH=X86" if="tivo-x86" />
+  <flag value="-DBOOTARCH=ARM" if="tivo-arm" />
+  <flag value="-DBOOTARCH=ARM64" if="tivo-arm64" />
+  <flag value="-DHPK_NO_SYMBOL_VERSIONING" if="tivo-x86" />
+  <flag value="-DOSTYPE=Linux" />
+  <flag value="-DCONFIG_DEBUG_PRINT_IN_RELEASE=1" />
+  <flag value="-D_REENTRANT" />
+  <flag value="-DLINUX_K26" />
+  <flag value="-DPPC=1" />
+  <flag value="-DX86=2" />
+  <flag value="-DMIPS=3" />
+  <flag value="-DSPARC=4" />
+  <flag value="-DTIVO_STB" unless="NOTMK"/> <!-- unless="tivo-x86" ? -->
+  <flag value="-Wall" />
+  <flag value="-Wcast-qual" />
+  <flag value="-Wconversion" />
+  <flag value="-Wundef" />
+  <flag value="-W" />
+  <flag value="-Werror" />
+  <cppflag value="-Wno-invalid-offsetof" />
+  <flag value="-Wtivo" if="anymips tivo-x86"/>
+  <flag value="-Wunused" if="debug" />  
+  <flag value="-Wno-unused" unless="debug" />
+  <flag value="-I${ISM_OBJDIR}/include" />
+  <flag value="-I${ROOT}/include" />
+  <!-- start HXCPP specific stuff? -->
+  <flag value="-I${HXCPP}/include"/>
+  <flag value="-w" /> <!-- disable all warnings? -->
+  <flag value="-fvisibility=hidden" />
+  <cppflag value="-frtti" /> <!-- think this on by default, so no harm -->
+  <flag value="-DHX_LINUX" /> <!-- think we are mosty linux-y -->
+  <flag value="-DHXCPP_BIG_ENDIAN" if="HXCPP_BIG_ENDIAN"/>
+  <flag value="-DHXCPP_M64" if="tivo-arm64" />
+  <include name="toolchain/common-defines.xml" />
+  <!-- end HXCPP specific stuff -->
+  <flag value="-c" />
+  <outflag value="-o" />
+  <objdir value="${OBJDIR}" if="OBJDIR" />
+  <objdir value="obj/tivo${OBJEXT}" unless="OBJDIR" />
+  <ext value=".o" />
+  <getversion value="${TOOLROOT}/bin/${compiler_arch}-TiVo-linux-gnu${compiler_abi}-g++ --version" />
+</compiler>
+
+<linker id="dll" exe="invalid" if="tivo">
+  <exe name="${TOOLROOT}/bin/${compiler_arch}-TiVo-linux-gnu${compiler_abi}-g++" />
+  <flag value="-mabicalls" if="anymips" />
+  <flag value="-fpic" />
+  <flag value="-fPIC" />
+  <flag value="-shared" />
+  <flag value="-mips32" if="anymips" />
+  <flag value="-mtune=5kf" if="anymips" />
+  <flag value="-mbranch-likely" if="anymips" />
+  <flag value="-march=armv7-a" if="tivo-arm" />
+  <flag value="-Wa,--trap" if="anymips" />
+  <flag value="-Wl,-rpath-link,${ROOT}/lib" />
+  <flag value="-L${ISM_OBJDIR}" />
+  <flag value="-L${ISM_OBJDIR}/plugins" />
+  <flag value="-L${ROOT}/lib" />
+  <flag value="-L${ROOT}/lib/plugins" />
+  <lib name="-ldl"/>
+  <lib name="-lpthread"/>
+  <ext value=".dso"/>
+  <outflag value="-o "/>
+</linker>
+
+<linker id="exe" exe="invalid" if="tivo">
+  <exe name="${TOOLROOT}/bin/${compiler_arch}-TiVo-linux-gnu${compiler_abi}-g++" />
+  <flag value="-Wl,--strip-debug" unless="tivo-x86" /> <!-- needs to be disabled if you want line numbers -->
+  <flag value="-mips32" if="anymips" />
+  <flag value="-mtune=5kf" if="anymips" />
+  <flag value="-mbranch-likely" if="anymips" />
+  <flag value="-march=armv7-a" if="tivo-arm" />
+  <flag value="-Wa,--trap" if="anymips" />
+  <flag value="-Wl,-rpath-link,${ROOT}/lib" />
+  <flag value="-rdynamic"/>
+  <flag value="-Wl,--export-dynamic"/> <!-- same as -rdynamic? -->
+  <flag value="-Wl,--gc-sections" unless="debug"/>
+  <flag value="-Wl,--no-keep-memory"/>
+  <flag value="-Wl,--reduce-memory-overheads"/>
+  <flag value="-Wl,--script=${OBJDIR}/chording.ldscript" if="HXCPP_APP_CHORDING tivo-mips" />
+  <flag value="-L${ISM_OBJDIR}" />
+  <flag value="-L${ISM_OBJDIR}/plugins" />
+  <flag value="-L${ROOT}/lib" />
+  <flag value="-L${ROOT}/lib/plugins" />
+  <flag value="-L${ROOT}/lib/spigotSecure" />
+  <lib name="-lz" if="static_link" />
+  <lib name="-lcurl" if="static_link" />
+  <lib name="-lcrypto" if="static_link"  />
+  <lib name="-lssl" if="static_link" />
+  <lib name="-lfreetype" if="static_link" />
+  <lib name="-lpng" if="static_link" />
+  <lib name="-ljpeg" if="static_link" />
+  <lib name="-lrt" if="static_link" />
+  <lib name="-lutil" if="static_link" />
+  <lib name="-lhpkoss" if="static_link" />
+  <lib name="-lhpkinterfaces" if="static_link" />
+  <lib name="-ltmk" if="static_link" unless="NOTMK" />
+  <lib name="-lhpkwrll" if="static_link" unless="tivo-x86" />
+  <lib name="-lhpkll" if="static_link" unless="anymips" />
+  <lib name="-lgfxcompositor" if="static_link" />
+  <lib name="-lhpkwrhl" if="static_link" unless="tivo-x86" />
+  <lib name="-lhpkhl" if="static_link" unless="anymips" />
+  <lib name="-lpthread" if="static_link" />
+  <lib name="-lstdc++" if="static_link" />
+  <lib name="-lm" if="static_link" />
+  <lib name="-lc" if="static_link" />
+  <lib name="-lc_nonshared" if="static_link" unless="anymips" />
+  <lib name="-lgcc" if="static_link" />
+  <lib name="-ltmk" unless="NOTMK"/> <!-- needed for process_log() used by GCnew -->
+  <lib name="-lrt" unless="NOTMK"/> <!-- needed by tmk -->
+  <lib name="-lutil" unless="NOTMK"/> <!-- needed by tmk -->
+  <lib name="-ldl" />
+  <lib name="-lpthread" />
+  <ext value=""/>
+  <outflag value="-o "/>
+</linker>
+
+</xml>

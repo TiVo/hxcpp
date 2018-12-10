@@ -1,0 +1,8 @@
+04/06/2015
+This is a development snapshot, and so has no tagged version.  This
+is a download of commit 437b35035de4f2578eadc289700f91577a4c131c.  It
+corresponds to the lib.haxe.org hxcpp version 3.2.193.
+
+This version has been dos2unix'd.  But this is turning out to be too difficult
+to maintain, so will make a subsequent checkin that simply un-dos2unix's all
+of the files so that they truly have no diff with the github version.

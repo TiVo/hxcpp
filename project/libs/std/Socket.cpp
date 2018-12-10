@@ -68,10 +68,10 @@ SOCKET val_sock(value inValue)
 {
    if (!val_is_null(inValue))
    {
-      if (val_is_kind(inValue,k_socket) )
+      if (val_type(inValue) == (intptr_t)k_socket)
          return ((SOCKET)(socket_int)val_data(inValue));
       inValue = val_field(inValue,id___s);
-      if (val_is_kind(inValue,k_socket) )
+      if (val_type(inValue) == (intptr_t)k_socket)
          return ((SOCKET)(socket_int)val_data(inValue));
    }
    val_throw(alloc_string("Invalid socket handle"));
@@ -567,7 +567,6 @@ static value socket_fast_select( value rs, value ws, value es, value timeout )
     SOCKET n = 0;
     fd_set rx, wx, ex;
     fd_set *ra, *wa, *ea;
-    value r;
     POSIX_LABEL(select_again);
     ra = make_socket_array(rs,&rx,&n);
     wa = make_socket_array(ws,&wx,&n);
@@ -1007,7 +1006,6 @@ static value socket_poll( value socks, value pdata, value timeout ) {
 }
 
 
-
 /**
 	socket_send_to : 'socket -> buf:string -> pos:int -> length:int -> addr:{host:'int32,port:int} -> int
 	<doc>
@@ -1093,8 +1091,91 @@ static value socket_recv_from( value o, value dataBuf, value pos, value len, val
 }
 
 
+static value socket_selector_initialize(value selector)
+{
+    if (!val_is_array(selector) || (val_array_size(selector) != 0)) {
+        val_throw(alloc_string("Invalid selector argument"));
+    }
+    
+    int sv[2];
 
+    if (socketpair(AF_LOCAL, SOCK_STREAM, PF_UNIX, sv)) {
+        return alloc_null();
+    }
 
+    fcntl(sv[0], F_SETFL, fcntl(sv[0], F_GETFD) | O_NONBLOCK);
+    fcntl(sv[1], F_SETFL, fcntl(sv[1], F_GETFD) | O_NONBLOCK);
+
+    val_array_set_i(selector, 0, alloc_abstract(k_socket, (void *) sv[0]));
+    val_array_set_i(selector, 1, alloc_abstract(k_socket, (void *) sv[1]));
+
+    return alloc_null();
+}
+
+static value socket_selector_select(value selector, value rs, value ws,
+                                    value es, value timeout)
+{
+    if (!val_is_array(selector) || (val_array_size(selector) != 2)) {
+        val_throw(alloc_string("Invalid selector argument"));
+    }
+
+    // Get the "read" end of the interrupt socket
+    value valsock = val_array_i(selector, 0);
+    int sock = val_sock(valsock);
+
+    if (val_is_null(rs)) {
+        rs = alloc_array(0);
+    }
+
+    // Add the 0 "read" end of the interrupt socket to the rs list
+    val_array_push(rs, valsock);
+    
+    // Select
+    value ret = socket_fast_select(rs, ws, es, timeout);
+
+    // Remove 0 "read" end of interrupt socket from rs
+    int i = 0, size = val_array_size(rs);
+    while (i < size) {
+        int this_sock = val_sock(val_array_i(rs, i));
+        if (this_sock == sock) {
+            val_array_set_i(rs, i, val_array_i(rs, size - 1));
+            val_array_set_size(rs, size - 1);
+            break;
+        }
+        i += 1;
+    }
+
+    // Clear the "read" end of the interrupt socket
+    char buf[256];
+    while (read(sock, buf, sizeof(buf)) == sizeof(buf)) {
+    }
+}
+
+static value socket_selector_cancel(value selector)
+{
+    // Write into the "1" write end of the interrupt socket
+    if (!val_is_array(selector) || (val_array_size(selector) != 2)) {
+        val_throw(alloc_string("Invalid selector argument"));
+    }
+    
+    int sock = val_sock(val_array_i(selector, 1));
+
+    char val = 1;
+
+    write(sock, &val, 1);
+}
+
+static value socket_selector_close(value selector)
+{
+    if (!val_is_array(selector) || (val_array_size(selector) != 2)) {
+        val_throw(alloc_string("Invalid selector argument"));
+    }
+    
+    close(val_sock(val_array_i(selector, 0)));
+    close(val_sock(val_array_i(selector, 1)));
+
+	val_array_set_size(selector, 0);
+}
 
 DEFINE_PRIM(socket_init,0);
 DEFINE_PRIM(socket_new,1);
@@ -1120,6 +1201,10 @@ DEFINE_PRIM(socket_set_fast_send,2);
 
 DEFINE_PRIM(socket_send_to,5);
 DEFINE_PRIM(socket_recv_from,5);
+DEFINE_PRIM(socket_selector_initialize,1);
+DEFINE_PRIM(socket_selector_select,5);
+DEFINE_PRIM(socket_selector_cancel,1);
+DEFINE_PRIM(socket_selector_close,1);
 
 DEFINE_PRIM(socket_poll_alloc,1);
 DEFINE_PRIM(socket_poll,3);

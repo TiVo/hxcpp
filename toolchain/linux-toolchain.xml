@@ -37,10 +37,11 @@
   <flag value="-fvisibility=hidden"/>
   <cppflag value="-frtti"/>
   <flag value="-g" if="debug"/>
-  <flag value="-O2" unless="debug"/>
-  <flag value="-fpic"/>
-  <flag value="-fPIC"/>
+  <flag value="-O3" unless="debug" />
+  <flag value="-fpic" if="dynamic_link"/>
+  <flag value="-fPIC" if="dynamic_link"/>
   <cppflag value="-Wno-invalid-offsetof" />
+  <flag value="-DDEBUG" if="debug tivo" />
   <flag value="-DHX_LINUX"/>
   <flag value="-DRASPBERRYPI=RASPBERRYPI" if="rpi"/>
   <flag value="-DHXCPP_MULTI_THREADED" if="HXCPP_MULTI_THREADED"/>
@@ -50,9 +51,14 @@
   <flag value="-m64" if="HXCPP_M64"/>
   <flag value="-DHXCPP_M64" if="HXCPP_M64"/>
   <flag value="-I${HXCPP}/include"/>
-  <objdir value="obj/linux${OBJEXT}/"/>
+  <flag value="-I${ISM_OBJDIR}/include" if="tivo" />
+  <flag value="-I${ROOT}/include" if="tivo" />
+  <objdir value="${OBJDIR}" if="OBJDIR" />
+  <objdir value="obj/linux${OBJEXT}" unless="OBJDIR" />
+
   <outflag value="-o"/>
   <ext value=".o"/>
+  <getversion value="g++ --version" />
 </compiler>
 
 <linker id="dll" exe="g++" if="linux">
@@ -67,7 +73,12 @@
   <flag value="-Xlinker"/>
   <flag value="--no-undefined" unless="HXCPP_ALLOW_UNDEFINED" />
   <flag value="-debug" if="debug"/>
+  <flag value="-L${ISM_OBJDIR}" if="tivo" />
+  <flag value="-L${ISM_OBJDIR}/plugins" if="tivo" />
+  <flag value="-L${ROOT}/lib" if="tivo" />
+  <flag value="-L${ROOT}/lib/plugins" if="tivo" />
   <lib name="-ldl"/>
+  <lib name="-lrt" />
   <ext value=".dso"/>
   <outflag value="-o "/>
 </linker>
@@ -79,7 +90,13 @@
   <flag value="-rdynamic"/>
   <flag value="-m32" unless="noM32"/>
   <flag value="-m64" if="HXCPP_M64"/>
+  <flag value="-Wl,--stats"/>
+  <flag value="-L${ISM_OBJDIR}" if="tivo" />
+  <flag value="-L${ISM_OBJDIR}/plugins" if="tivo" />
+  <flag value="-L${ROOT}/lib" if="tivo" />
+  <flag value="-L${ROOT}/lib/plugins" if="tivo" />
   <lib name="-ldl"/>
+  <lib name="-lrt" />
   <ext value=""/>
   <outflag value="-o "/>
 </linker>

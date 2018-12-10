@@ -1,4 +1,4 @@
-   #include <hxcpp.h>
+#include <hxcpp.h>
 #include <stdio.h>
 // Get headers etc.
 #include <hx/OS.h>
@@ -6,7 +6,11 @@
 #define IGNORE_CFFI_API_H
 
 #include <hx/CFFI.h>
+#ifdef USE_STD_MAP
 #include <map>
+#else
+#include <tr1/unordered_map>
+#endif
 #include <string>
 
 
@@ -111,8 +115,18 @@ vkind k_cpp_struct = (vkind)(vtAbstractBase + 3);
 vkind k_cpp_objc = (vkind)(vtAbstractBase + 4);
 static int sgKinds = (int)(vtAbstractBase + 5);
 
+#ifdef USE_STD_MAP
+
 typedef std::map<std::string,int> KindMap;
 typedef std::map<int,std::string> ReverseKindMap;
+
+#else
+
+typedef std::tr1::unordered_map<std::string,int> KindMap;
+typedef std::tr1::unordered_map<int,std::string> ReverseKindMap;
+
+#endif
+
 static KindMap sgKindMap;
 static ReverseKindMap sgReverseKindMap;
 
@@ -419,6 +433,15 @@ hx::Object * alloc_array(int arg1)
 }
 
 
+hx::Object * alloc_byte_array_from_data(unsigned char *data, int size)
+{
+    Array<unsigned char> array(size, size);
+    Array_obj<unsigned char> *ret = array.GetPtr();
+    ret->memcpy(0, data, size);
+    return ret;
+}
+
+
 
 // Array access - fast if possible - may return null
 // Resizing the array may invalidate the pointer
@@ -578,7 +601,7 @@ void val_buffer(buffer inBuffer,value inValue)
 
 
 
-// Call Function 
+// Call Function
 hx::Object * val_call0(hx::Object * arg1) THROWS
 {
    if (!arg1) Dynamic::ThrowBadFunctionError();
@@ -800,6 +823,11 @@ void  val_gc_remove_root(hx::Object **inRoot)
    hx::GCRemoveRoot(inRoot);
 }
 
+bool  gc_is_haxe_thread()
+{
+    return hx::IsHaxeThread();
+}
+
 void  gc_set_top_of_stack(int *inTopOfStack,bool inForce)
 {
    hx::SetTopOfStack(inTopOfStack,inForce);
@@ -812,57 +840,17 @@ void gc_change_managed_memory(int inDelta, const char *inWhy)
 }
 
 
-
-class Root *sgRootHead = 0;
-
-class Root
-{
-public:
-   Root()
-   {
-      mNext = 0;
-      mPrev = 0;
-      mValue = 0;
-      hx::GCAddRoot(&mValue);
-   }
-   ~Root()
-   {
-      hx::GCRemoveRoot(&mValue);
-   }
-
-   Root *mNext;
-   Root *mPrev;
-   hx::Object *mValue;
-};
-
-
-
 value *alloc_root()
 {
-   if (!sgRootHead)
-      sgRootHead = new Root;
-
-   Root *root = new Root;
-   root->mNext = sgRootHead->mNext;
-   if (root->mNext)
-      root->mNext->mPrev = root;
-
-   sgRootHead->mNext = root;
-   root->mPrev = sgRootHead;
-
-   return (value *)&root->mValue;
+   hx::Object ** result = new hx::Object *();
+   hx::GCAddRoot(result);
+   return (value *)result;
 }
 
 void free_root(value *inValue)
 {
-   int diff =(char *)(&sgRootHead->mValue) - (char *)sgRootHead;
-   Root *root = (Root *)( (char *)inValue - diff );
-
-   if (root->mPrev)
-      root->mPrev->mNext = root->mNext;
-   if (root->mNext)
-      root->mNext->mPrev = root->mPrev;
-
+   hx::Object **root = (hx::Object **) inValue;
+   hx::GCRemoveRoot(root);
    delete root;
 }
 

@@ -60,18 +60,14 @@ struct Deque : public Array_obj<Dynamic>
 	MyMutex     mMutex;
 	void PushBack(Dynamic inValue)
 	{
-		hx::EnterGCFreeZone();
 		AutoLock lock(mMutex);
-		hx::ExitGCFreeZone();
 
 		push(inValue);
 		mSemaphore.Set();
 	}
 	void PushFront(Dynamic inValue)
 	{
-		hx::EnterGCFreeZone();
 		AutoLock lock(mMutex);
-		hx::ExitGCFreeZone();
 
 		unshift(inValue);
 		mSemaphore.Set();
@@ -80,11 +76,9 @@ struct Deque : public Array_obj<Dynamic>
 	
 	Dynamic PopFront(bool inBlock)
 	{
-		hx::EnterGCFreeZone();
 		AutoLock lock(mMutex);
 		if (!inBlock)
 		{
-			hx::ExitGCFreeZone();
 			return shift();
 		}
 		// Ok - wait for something on stack...
@@ -92,10 +86,11 @@ struct Deque : public Array_obj<Dynamic>
 		{
 			mSemaphore.Reset();
 			lock.Unlock();
+			hx::EnterGCFreeZone();
 			mSemaphore.Wait();
+			hx::ExitGCFreeZone();
 			lock.Lock();
 		}
-		hx::ExitGCFreeZone();
 		if (length==1)
 			mSemaphore.Reset();
 		return shift();
@@ -103,17 +98,13 @@ struct Deque : public Array_obj<Dynamic>
 	#else
 	void PushBack(Dynamic inValue)
 	{
-		hx::EnterGCFreeZone();
 		AutoLock lock(mSemaphore);
-		hx::ExitGCFreeZone();
 		push(inValue);
 		mSemaphore.QSet();
 	}
 	void PushFront(Dynamic inValue)
 	{
-		hx::EnterGCFreeZone();
 		AutoLock lock(mSemaphore);
-		hx::ExitGCFreeZone();
 		unshift(inValue);
 		mSemaphore.QSet();
 	}
@@ -121,11 +112,17 @@ struct Deque : public Array_obj<Dynamic>
 	
 	Dynamic PopFront(bool inBlock)
 	{
-		hx::EnterGCFreeZone();
 		AutoLock lock(mSemaphore);
-		while(inBlock && !length)
+		while(inBlock && !length) {
+            hx::EnterGCFreeZone();
 			mSemaphore.QWait();
-		hx::ExitGCFreeZone();
+            hx::ExitGCFreeZone();
+        }
+        // The shift will take 1 from the Deque.  If more threads are waiting,
+        // another needs to be woken up also to get the next one.
+        if (length > 1) {
+            mSemaphore.QSet();
+        }
 		return shift();
 	}
 	#endif
@@ -382,6 +379,7 @@ void __hxcpp_tls_set(int inID,Dynamic inVal)
 
 // --- Mutex ------------------------------------------------------------
 
+#if defined (HX_WINDOWS)
 class hxMutex : public hx::Object
 {
 public:
@@ -423,6 +421,79 @@ public:
 
    MyMutex mMutex;
 };
+#else
+// More efficient implementation that does not do so many EnterGCFreeZone
+class hxMutex : public hx::Object
+{
+public:
+
+	hxMutex()
+        : mLocked(false)
+	{
+        pthread_mutex_init(&mMutex, 0);
+        pthread_cond_init(&mCond, 0);
+		mFinalizer = new hx::InternalFinalizer(this);
+		mFinalizer->mFinalizer = clean;
+	}
+
+	void __Mark(hx::MarkContext *__inCtx) { mFinalizer->Mark(); }
+
+   #ifdef HXCPP_VISIT_ALLOCS
+	void __Visit(hx::VisitContext *__inCtx) { mFinalizer->Visit(__inCtx); }
+   #endif
+
+	hx::InternalFinalizer *mFinalizer;
+
+	static void clean(hx::Object *inObj)
+	{
+		hxMutex *m = dynamic_cast<hxMutex *>(inObj);
+        if (m) {
+            pthread_mutex_destroy(&(m->mMutex));
+            pthread_cond_destroy(&(m->mCond));
+            m->mLocked = false;
+        }
+	}
+	bool Try()
+	{
+        pthread_mutex_lock(&mMutex);
+        if (mLocked && !pthread_equal(mLockingThread, pthread_self())) {
+            pthread_mutex_unlock(&mMutex);
+            return false;
+        }
+        else {
+            mLocked = true;
+            pthread_mutex_unlock(&mMutex);
+            return true;
+        }
+	}
+	void Acquire()
+	{
+        pthread_mutex_lock(&mMutex);
+        if (mLocked && !pthread_equal(mLockingThread, pthread_self())) {
+            hx::EnterGCFreeZone();
+            do {
+                pthread_cond_wait(&mCond, &mMutex);
+            } while (mLocked);
+            hx::ExitGCFreeZone();
+        }
+        mLocked = true;
+        mLockingThread = pthread_self();
+        pthread_mutex_unlock(&mMutex);
+	}
+	void Release()
+	{
+        pthread_mutex_lock(&mMutex);
+        mLocked = false;
+        pthread_cond_signal(&mCond);
+        pthread_mutex_unlock(&mMutex);
+	}
+
+    bool mLocked;
+    pthread_t mLockingThread;
+    pthread_mutex_t mMutex;
+    pthread_cond_t mCond;
+};
+#endif
 
 
 

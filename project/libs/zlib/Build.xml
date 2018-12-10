@@ -37,7 +37,7 @@
 
 <target id="zlib" output="${HX_TARGET_PREFIX}zlib${LIB_DBG}${HX_TARGET_SUFFIX}" tool="linker" toolid="${STD_MODULE_LINK}">
   <files id="hxcpp-zlib"/>
-  <outdir name="../../../${DESTDIR}/${BINDIR}"/>
+  <outdir name="${PREBINDIR}/${BINDIR}"/>
 </target>
 
 </xml>

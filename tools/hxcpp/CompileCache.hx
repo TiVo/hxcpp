@@ -25,6 +25,9 @@ class CompileCache
                break;
          }
 
+         try { FileSystem.createDirectory(compileCache); }
+         catch (e : Dynamic) { }
+
          if (FileSystem.exists(compileCache) && FileSystem.isDirectory(compileCache))
          {
             hasCache = true;

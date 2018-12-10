@@ -3,12 +3,15 @@
  <flag value="-DSTATIC_LINK" if="static_link"/>
  <flag value="-DHXCPP_EXE_LINK" if="exe_link"/>
  <flag value="-DHXCPP_M64" if="HXCPP_M64||HXCPP_ARM64"/>
- <flag value="-DHXCPP_VISIT_ALLOCS" />
+ <!-- TiVo turns off HXCPP_VISIT_ALLOCS, which is not needed and only
+      expands the size of executables unnecessarily -->
+ <!-- <flag value="-DHXCPP_VISIT_ALLOCS" /> -->
  <flag value="-Dhaxe_210" if="haxe_210"/>
  <flag value="-DHXCPP_MULTI_THREADED" if="HXCPP_MULTI_THREADED"/>
  <flag value="-DHXCPP_FLOAT32" if="HXCPP_FLOAT32"/>
  <flag value="-DHXCPP_CHECK_POINTER" if="HXCPP_CHECK_POINTER"/>
  <flag value="-DHXCPP_STACK_TRACE" if="HXCPP_STACK_TRACE"/>
+ <flag value="-DUSE_STD_MAP" if="USE_STD_MAP"/>
  <flag value="-DHXCPP_TELEMETRY" if="HXCPP_TELEMETRY"/>
  <flag value="-DHXCPP_PROFILE_EXTERNS" if="HXCPP_PROFILE_EXTERNS"/>
  <flag value="-DHXCPP_STACK_LINE" if="HXCPP_STACK_LINE"/>
@@ -26,4 +29,10 @@
  <flag value='-DHXCPP_API_LEVEL=${removeQuotes:hxcpp_api_level}' if="hxcpp_api_level" />
  <flag value='-DHXCPP_API_LEVEL=0' unless="hxcpp_api_level" />
  <flag value='-DHXCPP_OBJC' if="objc" />
+ <flag value='-DHXCPP_USE_STOCK_GC' if="HXCPP_USE_STOCK_GC" />
+ <!-- set -D_TIVO_ for all TiVo builds, allows C++ code to include
+      #ifdef _TIVO_ for TiVo-specific customizations -->
+ <flag value="-D_TIVO_" if="tivo" />
+ <!-- special TiVo hack flag for counting function calls -->
+ <flag value="-DTIVOCONFIG_COLLECT_FUNCTION_CALLS" if="TIVOCONFIG_COLLECT_FUNCTION_CALLS" />
 </xml>

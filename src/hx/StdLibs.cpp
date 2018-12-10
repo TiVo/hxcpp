@@ -19,6 +19,9 @@ typedef int64_t __int64;
 #ifdef WEBOS
 #include <syslog.h>
 #endif
+#if (defined APPLETV || defined IPHONE)
+#import <os/log.h>
+#endif
 #ifdef TIZEN
 extern "C" EXPORT_EXTRA void AppLogInternal(const char* pFunction, int lineNumber, const char* pFormat, ...);
 #endif
@@ -27,7 +30,13 @@ extern "C" EXPORT_EXTRA void AppLogInternal(const char* pFunction, int lineNumbe
 #endif
 #include <string>
 #include <vector>
+
+#ifdef USE_STD_MAP
 #include <map>
+#else
+#include <tr1/unordered_map>
+#endif
+
 #include <time.h>
 
 
@@ -203,29 +212,74 @@ void __hxcpp_stdlibs_boot()
 
 void __trace(Dynamic inObj, Dynamic inData)
 {
-#ifdef TIZEN
-   AppLogInternal(inData==null() ? "?" : inData->__Field( HX_CSTRING("fileName") , HX_PROP_DYNAMIC) ->toString().__s,
-      inData==null() ? 0 : inData->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC)->__ToInt(),
-      "%s\n", inObj.GetPtr() ? inObj->toString().__s : "null" );
-#else
-#ifdef HX_UTF8_STRINGS
-   #if defined(HX_ANDROID) && !defined(HXCPP_EXE_LINK)
-   __android_log_print(ANDROID_LOG_INFO, "trace","%s:%d: %s",
-   #elif defined(WEBOS)
-   syslog(LOG_INFO, "%s:%d: %s",
-   #else
-   printf("%s:%d: %s\n",
-   #endif
-               inData==null() ? "?" : inData->__Field( HX_CSTRING("fileName") , HX_PROP_DYNAMIC) ->toString().__s,
-               inData==null() ? 0 : inData->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC)->__ToInt(),
-               inObj.GetPtr() ? inObj->toString().__s : "null" );
-#else
-   printf( "%S:%d: %S\n",
-               inData->__Field( HX_CSTRING("fileName") , HX_PROP_DYNAMIC)->__ToString().__s,
-               inData->__Field( HX_CSTRING("lineNumber") , HX_PROP_DYNAMIC)->__ToInt(),
-               inObj.GetPtr() ? inObj->toString().__s : L"null" );
-#endif
-#endif
+    const char *fileName;
+    int lineNumber;
+    const char *msg;
+
+    Dynamic d1, d2;
+
+    if (inObj.GetPtr()) {
+        msg = inObj->toString().__s;
+    }
+    else {
+        msg = "null";
+    }
+
+    if (inData == null())
+    {
+    #if defined(TIZEN)
+        dlog_dprint(DLOG_INFO, "trace","%s\n", msg );
+    #else
+    #ifdef HX_UTF8_STRINGS
+      #if defined(HX_ANDROID) && !defined(HXCPP_EXE_LINK)
+          __android_log_print(ANDROID_LOG_INFO, "trace","%s",msg );
+      #elif defined(WEBOS)
+          syslog(LOG_INFO, "%s", msg );
+      #elif defined(IPHONE) || defined(APPLETV)
+          os_log_info(OS_LOG_DEFAULT, "%{public}s\n", msg);
+      #else
+          printf( "%s\n", msg);
+      #endif
+    #else
+      printf( "%S\n", msg);
+    #endif
+    #endif
+    }
+    else
+    {
+        d1 = inData->__Field(HX_CSTRING("fileName"), HX_PROP_DYNAMIC);
+        if (d1 == null()) {
+            fileName = "?";
+        }
+        else {
+            fileName = d1->toString().__s;
+        }
+        d2 = inData->__Field(HX_CSTRING("lineNumber"), HX_PROP_DYNAMIC);
+        if (d2 == null()) {
+            lineNumber = 0;
+        }
+        else {
+            lineNumber = d2->__ToInt();
+        }
+
+    #ifdef TIZEN
+        AppLogInternal(fileName, lineNumber, "%s\n", msg);
+    #else
+    #ifdef HX_UTF8_STRINGS
+       #if defined(HX_ANDROID) && !defined(HXCPP_EXE_LINK)
+       __android_log_print(ANDROID_LOG_INFO, "trace","%s:%d: %s", fileName, lineNumber, msg);
+       #elif defined(WEBOS)
+       syslog(LOG_INFO, "%s:%d: %s", fileName, lineNumber, msg);
+       #elif defined(IPHONE) || defined(APPLETV)
+       os_log_info(OS_LOG_DEFAULT, "%{public}s:%{public}d: %{public}s\n", fileName, lineNumber, msg);
+       #else
+       printf("%s:%d: %s\n", fileName, lineNumber, msg);
+       #endif
+    #else
+       printf( "%S:%d: %S\n", fileName, lineNumber, msg);
+    #endif
+    #endif
+    }
 }
 
 void __hxcpp_exit(int inExitCode)
@@ -257,12 +311,20 @@ double  __time_stamp()
 
    return (double)clock() / ( (double)CLOCKS_PER_SEC);
 #else
+#ifdef HX_LINUX
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    double t = (ts.tv_sec + (((double) ts.tv_nsec ) * 1e-9));
+    if (t0==0) t0 = t;
+    return t-t0;
+#else
    struct timeval tv;
    if( gettimeofday(&tv,0) )
       throw Dynamic("Could not get time");
    double t =  ( tv.tv_sec + ((double)tv.tv_usec) / 1000000.0 );
    if (t0==0) t0 = t;
    return t-t0;
+#endif
 #endif
 }
 
@@ -493,8 +555,11 @@ Dynamic __hxcpp_create_var_args(Dynamic &inArrayFunc)
 
 
 
-
+#ifdef USE_STD_MAP
 typedef std::map<std::string,int> StringToField;
+#else
+typedef std::tr1::unordered_map<std::string,int> StringToField;
+#endif
 
 // These need to be pointers because of the unknown order of static object construction.
 String *sgFieldToString=0;

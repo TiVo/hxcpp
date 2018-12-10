@@ -223,16 +223,28 @@ namespace hx { HXCPP_EXTERN_CLASS_ATTRIBUTES void NullReference(const char *type
 namespace hx { extern String sNone[]; }
 void __hxcpp_check_overflow(int inVal);
 
+// Special crash handling hooks ------------------------------------------
+// Waits forever, returning only when either:
+// - A critical error in the form of a fatal Unix signal (SEGV, etc) has
+//   occurred
+// - __hxcpp_crash_critical_error(s) has been called
+// Returns a string description of the crash.
+String __hxcpp_crash_wait();
+// Called to wake up __hxcpp_crash_wait and return the given string
+void __hxcpp_crash_critical_error(String s);
+
 namespace hx
 {
 class MarkContext;
 
+#ifdef HXCPP_VISIT_ALLOCS
 class VisitContext
 {
 public:
    virtual void visitObject(hx::Object **ioPtr)=0;
    virtual void visitAlloc(void **ioPtr)=0;
 };
+#endif
 
 
 #if (HXCPP_API_LEVEL >= 313)

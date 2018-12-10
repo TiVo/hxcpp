@@ -1,5 +1,11 @@
 #include <hxcpp.h>
+#include <string>
+
+#ifdef USE_STD_MAP
 #include <map>
+#else
+#include <tr1/unordered_map>
+#endif
 
 #ifdef ANDROID
 #include <android/log.h>
@@ -8,8 +14,11 @@
 
 namespace hx
 {
-
-typedef std::map<String,Class> ClassMap;
+#ifdef USE_STD_MAP
+typedef std::map<std::string,Class> ClassMap;
+#else
+typedef std::tr1::unordered_map<std::string,Class> ClassMap;
+#endif
 static ClassMap *sClassMap = 0;
 
 Class RegisterClass(const String &inClassName, CanCastFunc inCanCast,
@@ -41,7 +50,7 @@ Class RegisterClass(const String &inClassName, CanCastFunc inCanCast,
                                   #endif
                                   );
    Class c(obj);
-   (*sClassMap)[inClassName] = c;
+   (*sClassMap)[inClassName.c_str()] = c;
    return c;
 }
 
@@ -49,7 +58,7 @@ void RegisterClass(const String &inClassName, Class inClass)
 {
    if (sClassMap==0)
       sClassMap = new ClassMap;
-   (*sClassMap)[inClassName] = inClass;
+   (*sClassMap)[inClassName.c_str()] = inClass;
 }
 
 
@@ -114,9 +123,9 @@ bool Class_obj::SetNoStaticField(const String &inString, Dynamic &ioValue, hx::P
 
 void Class_obj::registerScriptable(bool inOverwrite)
 {
-   if (!inOverwrite && sClassMap->find(mName)!=sClassMap->end())
+   if (!inOverwrite && sClassMap->find(mName.c_str())!=sClassMap->end())
       return;
-   (*sClassMap)[ mName ] = this;
+   (*sClassMap)[ mName.c_str() ] = this;
 }
 
 Class Class_obj::GetSuper()
@@ -175,7 +184,7 @@ void Class_obj::VisitStatics(hx::VisitContext *__inCtx)
 
 Class Class_obj::Resolve(String inName)
 {
-   ClassMap::const_iterator i = sClassMap->find(inName);
+   ClassMap::const_iterator i = sClassMap->find(inName.c_str());
    if (i==sClassMap->end())
    {
       // Class class...
@@ -344,7 +353,7 @@ void MarkClassStatics(hx::MarkContext *__inCtx)
       HX_MARK_OBJECT(i->second.mPtr);
 
       #ifdef HXCPP_DEBUG
-      hx::MarkPushClass(i->first.__s,__inCtx);
+      hx::MarkPushClass(i->first.c_str(),__inCtx);
       hx::MarkSetMember("statics",__inCtx);
       #endif
    
@@ -367,9 +376,6 @@ void VisitClassStatics(hx::VisitContext *__inCtx)
    ClassMap::iterator end = sClassMap->end();
    for(ClassMap::iterator i = sClassMap->begin(); i!=end; ++i)
    {
-      // all strings should be constants anyhow - should not be needed?
-      HX_VISIT_STRING(i->first.__s);
-
       HX_VISIT_OBJECT(i->second.mPtr);
 
       i->second->VisitStatics(__inCtx);
@@ -389,7 +395,7 @@ Array<String> __hxcpp_get_class_list()
       for(hx::ClassMap::iterator i=hx::sClassMap->begin(); i!=hx::sClassMap->end(); ++i)
       {
          if (i->second.mPtr)
-            result->push( i->first );
+            result->push( String(i->first.c_str()) );
       }
    }
    return result;

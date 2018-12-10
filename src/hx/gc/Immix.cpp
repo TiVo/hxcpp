@@ -3873,6 +3873,11 @@ void GCPrepareMultiThreaded()
 }
 
 
+bool IsHaxeThread()
+{
+    return (tlsImmixAllocator != 0);
+}
+
 void SetTopOfStack(int *inTop,bool inForce)
 {
    if (inTop)

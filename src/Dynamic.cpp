@@ -364,7 +364,14 @@ hx::IndexRef Dynamic::operator[](int inIndex)
 
 void Dynamic::ThrowBadFunctionError()
 {
-	hx::Throw( HX_NULL_FUNCTION_POINTER );
+    /**
+     * TiVo workaround -- this code used to throw a Dynamic allocated on the
+     * stack; this appears to tickle some kind of compiler bug on dev-arm
+     * builds.  Throwing a value declared not on the stack appears to solve
+     * this issue.
+    **/
+    static Dynamic d(HX_NULL_FUNCTION_POINTER);
+	hx::Throw(d);
 }
 
 #include <hx/DynamicImpl.h>
@@ -375,9 +382,17 @@ CppInt32__::CppInt32__(const Dynamic &inD) : mValue(inD->__ToInt()) { }
 }
 
 namespace hx {
+
 null BadCast()
 {
-   hx::Throw(HX_INVALID_CAST);
+    /**
+     * TiVo workaround -- this code used to throw a Dynamic allocated on the
+     * stack; this appears to tickle some kind of compiler bug on dev-arm
+     * builds.  Throwing a value declared not on the stack appears to solve
+     * this issue.
+    **/
+   static Dynamic d(HX_INVALID_CAST);
+   hx::Throw(d);
    return null();
 }
 }

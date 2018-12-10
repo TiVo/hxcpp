@@ -182,8 +182,13 @@ void VisitClassStatics(hx::VisitContext *__inCtx);
 
 // Called by haxe/application code to mark allocations.
 //  "Object" allocs will recursively call __Mark
+#ifdef HXCPP_USE_STOCK_GC
 inline void MarkAlloc(void *inPtr ,hx::MarkContext *__inCtx);
 inline void MarkObjectAlloc(hx::Object *inPtr ,hx::MarkContext *__inCtx);
+#else
+void MarkAlloc(void *inPtr ,hx::MarkContext *__inCtx);
+void MarkObjectAlloc(hx::Object *inPtr ,hx::MarkContext *__inCtx);
+#endif
 
 // Implemented differently for efficiency
 void MarkObjectArray(hx::Object **inPtr, int inLength, hx::MarkContext *__inCtx);
@@ -201,6 +206,7 @@ HXCPP_EXTERN_CLASS_ATTRIBUTES void MarkPopClass(hx::MarkContext *__inCtx);
 void GCCheckPointer(void *);
 
 
+bool IsHaxeThread();
 void SetTopOfStack(void *inTopOfStack,bool inForce=false);
 
 // Called internally before and GC operations
@@ -273,6 +279,8 @@ extern void BadImmixAlloc();
 
 HXCPP_EXTERN_CLASS_ATTRIBUTES extern unsigned int gPrevMarkIdMask;
 
+#ifdef HXCPP_USE_STOCK_GC
+
 // Called only once it is determined that a new mark is required
 HXCPP_EXTERN_CLASS_ATTRIBUTES void MarkAllocUnchecked(void *inPtr ,hx::MarkContext *__inCtx); 
 HXCPP_EXTERN_CLASS_ATTRIBUTES void MarkObjectAllocUnchecked(hx::Object *inPtr ,hx::MarkContext *__inCtx);
@@ -289,6 +297,8 @@ inline void MarkObjectAlloc(hx::Object *inPtr ,hx::MarkContext *__inCtx)
    if ( ((unsigned int *)inPtr)[-1] & hx::gPrevMarkIdMask )
       MarkObjectAllocUnchecked(inPtr,__inCtx);
 }
+
+#endif // HXCPP_USE_STOCK_GC
 
 
 } // end namespace hx
@@ -352,9 +362,13 @@ inline void MarkObjectAlloc(hx::Object *inPtr ,hx::MarkContext *__inCtx)
 
 
 
-
+#ifdef HXCPP_USE_STOCK_GC
 #define HX_MARK_STRING(ioPtr) \
    if (ioPtr) hx::MarkAlloc((void *)ioPtr, __inCtx );
+#else
+#define HX_MARK_STRING(ioPtr) \
+    if (ioPtr && !(((unsigned int *)ioPtr)[-1] & HX_GC_CONST_ALLOC_BIT) ) hx::MarkAlloc((void *)ioPtr, __inCtx )
+#endif
 
 #define HX_MARK_ARRAY(ioPtr) { if (ioPtr) hx::MarkAlloc((void *)ioPtr, __inCtx ); }
 
@@ -373,9 +387,16 @@ inline void MarkObjectAlloc(hx::Object *inPtr ,hx::MarkContext *__inCtx)
 #define HX_VISIT_ARRAY(ioPtr) { if (ioPtr) __inCtx->visitAlloc((void **)&ioPtr); }
 
 
-
-
-
+// compiler extensions for ensuring locality of methods
+#if defined(__GNUC__)
+#  if defined(__APPLE__) || defined(__MACH__)
+#    define HX_ATTRIBUTE_SECTION(s)     __attribute__((section("__TEXT," #s)))
+#  else
+#    define HX_ATTRIBUTE_SECTION(s)     __attribute__((section(#s)))
+#  endif
+#else
+#  define HX_ATTRIBUTE_SECTION(s)   
+#endif
 
 
 #endif
