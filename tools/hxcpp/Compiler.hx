@@ -278,7 +278,7 @@ class Compiler
             }
             if (newer)
             {
-               //Log.info(""," copy cache for " + obj_name );
+               if (Log.verbose) Log.info(" use cache for " + obj_name );
                if (!useCacheInPlace)
                   sys.io.File.copy(cacheName, obj_name);
                if (Log.verbose) Log.info(" use cache for " + obj_name );

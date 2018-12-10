@@ -40,7 +40,7 @@
   <cppflag value="-frtti"/>
   <cppflag value="-std=c++11" if="HXCPP_CPP11" />
   <flag value="-g" if="debug"/>
-  <flag value="-O3" unless="debug"/>
+  <flag value="-O2" unless="debug"/>
   <flag value="-fpic" if="dynamic_link"/>
   <flag value="-fPIC" if="dynamic_link"/>
   <flag value="-Wno-overflow" />
