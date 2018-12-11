@@ -41,7 +41,7 @@ class GenMacro
             arr_list.push( "inArgs[" + (arg-1) + "]");
             arg_list.push( "inArg" + (arg-1));
             dynamic_arg_list.push("const Dynamic &inArg" + (arg-1) );
-            dynamic_adds.push( "->init(" + (arg-1) + ",inArg" + (arg-1) + ")" );
+            dynamic_adds.push( "->Add(inArg" + (arg-1) + ")" );
          }
 
          params.push( {
@@ -54,14 +54,13 @@ class GenMacro
       }
 
       var locals = new Array<Dynamic>();
-      var jumboLocals = new Array<Dynamic>();
       var marks = new Array<String>();
       var visits = new Array<String>();
       var type_vars = new Array<String>();
       var type_args = new Array<String>();
       var construct_args = new Array<String>();
       var construct_vars = new Array<String>();
-      for(arg in 1...62)
+      for(arg in 1...20)
       {
          var vid = arg-1;
          if (vid>=0)
@@ -74,7 +73,7 @@ class GenMacro
             construct_vars.push( "v" + vid +"(__" + vid + ")"  );
          }
 
-         var local = {
+         locals.push( {
              ARG : arg,
              MARKS : marks.join(" "),
              VISITS : visits.join(" "),
@@ -83,19 +82,13 @@ class GenMacro
              TYPE_DECL : type_vars.join(";"),
              CONSTRUCT_VARS : construct_vars.join(","),
              CONSTRUCT_ARGS : construct_args.join(",")
-            };
-         if (arg<20)
-            locals.push(local);
-         else
-            jumboLocals.push(local);
+            } );
       }
 
       Reflect.setField(context, "PARAMS", params);
       Reflect.setField(context, "LOCALS", locals);
       Reflect.setField(context, "NS", "::");
 
-      var fixed = File.getContent("MacrosFixed.h");
-      fixed = fixed.split("").join("");
       var fileContents:String = File.getContent("Macros.tpl");
       fileContents = fileContents.split("").join("");
 
@@ -103,21 +96,7 @@ class GenMacro
       var result:String = template.execute(context);
       var fileOutput:FileOutput = File.write("Macros.h", true);
       fileOutput.writeString(warning);
-      fileOutput.writeString(fixed);
       fileOutput.writeString(result);
-      fileOutput.close();
-
-      var fileContents:String = File.getContent("MacrosJumbo.tpl");
-      fileContents = fileContents.split("").join("");
-      var template:Template = new Template(fileContents);
-      Reflect.setField(context, "LOCALS", jumboLocals);
-      var result:String = template.execute(context);
-      var fileOutput:FileOutput = File.write("MacrosJumbo.h", true);
-      fileOutput.writeString(warning);
-      fileOutput.writeString(result);
-      fileOutput.close();
-
-
 
       var fileContents:String = File.getContent("DynamicImpl.tpl");
       fileContents = fileContents.split("").join("");
@@ -126,8 +105,9 @@ class GenMacro
       var fileOutput:FileOutput = File.write("DynamicImpl.h", true);
       fileOutput.writeString(warning);
       fileOutput.writeString(result);
-      fileOutput.close();
 
+
+      fileOutput.close();
    }
 
    public static function main() { new GenMacro(); }

@@ -7,7 +7,7 @@ namespace cpp
 class HXCPP_EXTERN_CLASS_ATTRIBUTES IteratorBase : public hx::Object
 {
 public:
-   hx::Val __Field(const String &inString ,hx::PropertyAccess inCallProp);
+   Dynamic __Field(const String &inString ,hx::PropertyAccess inCallProp);
    virtual bool hasNext() = 0;
    virtual Dynamic _dynamicNext() = 0;
 

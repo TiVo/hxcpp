@@ -27,7 +27,7 @@
 <target id="mysql" output="${HX_TARGET_PREFIX}mysql5${LIB_DBG}${HX_TARGET_SUFFIX}" tool="linker" toolid="${STD_MODULE_LINK}">
   <files id="mysql"/>
   <lib name="ws2_32.lib" if="windows" unless="static_link" />
-   <outdir name="${PREBINDIR}/${BINDIR}"/>
+  <outdir name="${PREBINDIR}/${BINDIR}"/>
 </target>
 
 

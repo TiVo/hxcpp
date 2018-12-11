@@ -48,9 +48,8 @@
 //     pool.  Must be greater than or equal to HXCPP_GC_ALLOC_2_SIZE.
 //     Defaults to 64 bytes.
 //
-// TIVOCONFIG_GC_THREAD_COUNT -- this number of threads (beyond the haxe
-//     thread that initiated GC itself) that will be used to perform the GC.
-//     Defaults to 2.
+// TIVOCONFIG_GC_THREAD_COUNT -- this number of threads will be used to
+//     perform the GC.  Defaults to 2.
 //
 // TIVOCONFIG_GC_COLLECT_SIZE -- number of bytes that can be allocated before
 //     a system-wide GC is performed.  Note that the larger this is made, the
@@ -84,13 +83,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#if (defined HX_MACOS || defined APPLETV || defined IPHONE)
+#define USE_STD_MAP
+#else
+#include <tr1/unordered_map>
+#endif
 #include <unistd.h>
 #include <vector>
 
 #include "hxcpp.h"
 #include "hx/GC.h"
-#include "hx/StackContext.h"
-#include "hx/Unordered.h"
 #include "Hash.h"
 
 
@@ -108,6 +110,14 @@
 
 #ifdef TIVO_STB
 #include <stx/StxProcessLog.h>
+#endif
+
+
+// Mac OS X implementation of std::tr1::unordered_map is buggy?
+#ifdef USE_STD_MAP
+#define STD_MAP std::map
+#else
+#define STD_MAP std::tr1::unordered_map
 #endif
 
 
@@ -325,7 +335,7 @@ static uint64_t nowUs()
 // This is the next id to assign to objects.  It is protected by g_lock.
 static int g_next_id = 1;
 // This is the mapping of ids to objects.  It is protected by g_lock.
-static hx::UnorderedMap<int, uintptr_t> g_id_map;
+static STD_MAP<int, uintptr_t> g_id_map;
 #endif
 
 // These are explicitly declared root objects; hxcpp doesn't really seem to
@@ -354,7 +364,7 @@ static bool g_gc_in_progress;
 
 #ifdef TIVOCONFIG_GC_ENABLE_DEBUGGING
 static int g_alloc_count;
-static hx::UnorderedMap<uint32_t, uint32_t> g_size_statistics;
+static STD_MAP<uint32_t, uint32_t> g_size_statistics;
 // Debugging timestamps are reported relative to the first instant that the
 // GC initializes, in order to keep the value small (< 32 bits)
 static uint64_t g_zero_time_us;
@@ -897,24 +907,6 @@ static BlockManagerType(TIVOCONFIG_GC_ALLOC_3_SIZE,
                         IN_ALLOCATOR_3_FLAG) gBlockManager3;
 #endif
 
-// Must declare this stupid thing
-class ImmixAllocatorIsStupid : public hx::StackContext
-{
-public:
-
-    ImmixAllocatorIsStupid() { }
-
-    virtual ~ImmixAllocatorIsStupid() { }
-
-    void *CallAlloc(int inSize, unsigned int inObjectFlags)
-    {
-        return hx::InternalNew
-            (inSize, inObjectFlags & IMMIX_ALLOC_IS_CONTAINER);
-    }
-
-    void SetupStack() { }
-};
-
 
 class HaxeThread
 {
@@ -969,9 +961,11 @@ public:
 #endif
             // This is the first HaxeThread ... need to have the key
             pthread_key_create(&gInfoKey, 0);
-            // And create the GC threads if necessary.
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
-            for (int i = 0; i < TIVOCONFIG_GC_THREAD_COUNT; i++) {
+            // And create the GC threads if necessary.  Create one less than
+            // the total GC thread count because the haxe thread initiating GC
+            // counts too.
+#if (TIVOCONFIG_GC_THREAD_COUNT > 2)
+            for (int i = 1; i < TIVOCONFIG_GC_THREAD_COUNT; i++) {
                 pthread_t junk;
                 pthread_create(&junk, 0, &GCTaskThreadMain, 0);
             }
@@ -984,17 +978,7 @@ public:
         mNext = gHead;
         gHead = this;
 
-        // Must create the StackContext thing for this thread
-        mImmixIsStupid = new ImmixAllocatorIsStupid();
-        hx::tlsStackContext = mImmixIsStupid;
-
         pthread_mutex_unlock(&gHeadMutex);
-    }
-
-    ~HaxeThread()
-    {
-        // Delete the StackContext thing for this thread
-        delete mImmixIsStupid;
     }
 
     inline void Unregister()
@@ -1363,7 +1347,7 @@ private:
         mLargeAllocator.MergeInto(live->mLargeAllocator);
     }
 
-#if (TIVOCONFIG_GC_THREAD_COUNT == 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT == 1)
     
     static void PerformGC()
     {
@@ -1492,7 +1476,7 @@ private:
         pthread_cond_broadcast(&gCollectDoneCond);
     }
 
-#else // TIVOCONFIG_GC_THREAD_COUNT > 0
+#else // TIVOCONFIG_GC_THREAD_COUNT > 1
 
     // Types of mark task to perform
     enum MarkTaskType
@@ -1857,9 +1841,6 @@ private:
 #endif
     LargeAllocator mLargeAllocator;
 
-    // hxcpp foolishness
-    hx::StackContext *mImmixIsStupid;
-
     // The pthread key that is used to look up an instance of ThreadGlobalData
     // for each thread
     static pthread_key_t gInfoKey;
@@ -1877,7 +1858,7 @@ private:
     static pthread_mutex_t gGcMutex;
     static pthread_cond_t gCollectDoneCond;
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     // Stack of mark tasks to perform
     static std::list<MarkTask> gMarkTasks;
     // Stack of sweep tasks to perform
@@ -1911,11 +1892,11 @@ static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t g_cond = PTHREAD_COND_INITIALIZER;
 
 // This maps allocations to the weak refs to them.  Protected by g_lock.
-static hx::UnorderedMap<void *, std::list<GCWeakRef *> > g_weak_ref_map;
+static STD_MAP<void *, std::list<GCWeakRef *> > g_weak_ref_map;
 
 // This maps objects to finalizer data - it is expected that very few
 // finalizers will be used
-static hx::UnorderedMap<hx::Object *, FinalizerData> g_finalizers;
+static STD_MAP<hx::Object *, FinalizerData> g_finalizers;
 
 // Hxcpp includes a "weak hash" class that needs GC-side support
 static std::list<hx::HashBase<Dynamic> *> g_weak_hash_list;
@@ -1927,7 +1908,7 @@ uint32_t HaxeThread::gActiveThreadCount;
 pthread_mutex_t HaxeThread::gHeadMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t HaxeThread::gGcMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t HaxeThread::gCollectDoneCond = PTHREAD_COND_INITIALIZER;
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
 std::list<HaxeThread::MarkTask> HaxeThread::gMarkTasks;
 std::list<HaxeThread::SweepTask> HaxeThread::gSweepTasks;
 uint32_t HaxeThread::gOutstandingTaskCount;
@@ -2027,8 +2008,16 @@ static void RunFinalizer(hx::Object *obj)
 // threads, so no locking is necessary
 static void HandleWeakRefs()
 {
-    hx::UnorderedMap<void *, std::list<GCWeakRef *> >::iterator iter =
+#ifdef USE_STD_MAP
+    std::map<void *, std::list<GCWeakRef *> >::iterator iter =
         g_weak_ref_map.begin();
+    // Must accumulate elements to remove since the iterator cannot be
+    // disturbed in pre-C++11 (such as Mac OS X)
+    std::list<void *> removeList;
+#else
+    std::tr1::unordered_map<void *, std::list<GCWeakRef *> >::iterator iter =
+        g_weak_ref_map.begin();
+#endif
 
     while (iter != g_weak_ref_map.end()) {
         Entry *entry = ENTRY_FROM_PTR(iter->first);
@@ -2042,15 +2031,28 @@ static void HandleWeakRefs()
         while (iter2 != refs.end()) {
             (*iter2++)->mRef.mPtr = 0;
         }
+#ifdef USE_STD_MAP
+        removeList.push_back(iter->first);
+        iter++;
+#else
         iter = g_weak_ref_map.erase(iter);
+#endif
     }
+
+#ifdef USE_STD_MAP
+    std::list<void *>::iterator removeIter = removeList.begin();
+    while (removeIter != removeList.end()) {
+        g_weak_ref_map.erase(*removeIter);
+        removeIter++;
+    }
+#endif
 }
 
 
 static void RemoveWeakRef(GCWeakRef *wr)
 {
     void *ptr = wr->mRef.mPtr;
-    hx::UnorderedMap<void *, std::list<GCWeakRef *> >::iterator iter = 
+    STD_MAP<void *, std::list<GCWeakRef *> >::iterator iter = 
         g_weak_ref_map.find(ptr);
     if (iter == g_weak_ref_map.end()) {
         return;
@@ -2070,7 +2072,7 @@ static void HandleFinalizers()
     std::list<hx::Object *> torun;
 
     {
-        hx::UnorderedMap<hx::Object *, FinalizerData>::iterator it =
+        STD_MAP<hx::Object *, FinalizerData>::iterator it =
             g_finalizers.begin();
         while (it != g_finalizers.end()) {
             if ((FLAGS_OF_ENTRY(ENTRY_FROM_PTR(it->first)) & LAST_MARK_MASK)
@@ -2405,10 +2407,7 @@ void *hx::InternalNew(int inSize, bool inIsObject)
 }
 
 
-namespace hx
-{
-
-void *InternalRealloc(void *ptr, int new_size, bool)
+void *hx::InternalRealloc(void *ptr, int new_size)
 {
     void *ret = (HaxeThread::Get(true))->Reallocate(ptr, new_size);
 
@@ -2420,7 +2419,7 @@ void *InternalRealloc(void *ptr, int new_size, bool)
 }
 
 
-void *Object::operator new(size_t inSize, bool inIsObject, const char *)
+void *hx::Object::operator new(size_t inSize, bool inIsObject, const char *)
 {
     void *ret = (HaxeThread::Get(true))->Allocate(inSize, inIsObject);
     
@@ -2434,51 +2433,11 @@ void *Object::operator new(size_t inSize, bool inIsObject, const char *)
 }
 
 
-unsigned int ObjectSizeSafe(void *inData)
-{
-    Entry *entry = ENTRY_FROM_PTR(inData);
-
-    if (false) {
-    }
-    #if USE_ALLOCATOR_0
-    if (entry->flags_spacing & IN_ALLOCATOR_0_FLAG) {
-        return TIVOCONFIG_GC_ALLOC_0_SIZE;
-    }
-    #endif
-    #if USE_ALLOCATOR_1
-    else if (entry->flags_spacing & IN_ALLOCATOR_1_FLAG) {
-        return TIVOCONFIG_GC_ALLOC_1_SIZE;
-    }
-    #endif
-    #if USE_ALLOCATOR_2
-    else if (entry->flags_spacing & IN_ALLOCATOR_2_FLAG) {
-        return TIVOCONFIG_GC_ALLOC_2_SIZE;
-    }
-    #endif
-    #if USE_ALLOCATOR_3
-    else if (entry->flags_spacing & IN_ALLOCATOR_3_FLAG) {
-        return TIVOCONFIG_GC_ALLOC_3_SIZE;
-    }
-    #endif
-    else {
-        return LARGE_ENTRY_FROM_PTR(inData)->size;
-    }
-}
-
-}
-
-
 /**** hxcpp public functions *********************************************** */
 
 void __hxcpp_set_finalizer(Dynamic inObject, void *inFinalizer)
 {
     SetFinalizer(inObject.mPtr, 0, 0, (HaxeFinalizer) inFinalizer);
-}
-
-
-void _hx_set_finalizer(Dynamic inObject, HaxeFinalizer inFinalizer)
-{
-    SetFinalizer(inObject.mPtr, 0, 0, inFinalizer);
 }
 
 
@@ -2513,7 +2472,7 @@ hx::Object *__hxcpp_weak_ref_get(Dynamic inRef)
 // unique identifier for a pointer is required.
 int __hxcpp_obj_id(Dynamic inObj)
 {
-    uintptr_t ptr = (uintptr_t) inObj.mPtr;
+    uintptr_t ptr = (uintptr_t) inObj->__GetRealObject();
     if (ptr == 0) {
         return 0;
     }
@@ -2551,7 +2510,7 @@ hx::Object *__hxcpp_id_obj(int id)
 
     Lock();
     
-    hx::UnorderedMap<int, uintptr_t>::iterator i = g_id_map.find(id);
+    STD_MAP<int, uintptr_t>::iterator i = g_id_map.find(id);
 
     hx::Object *ret = (i == g_id_map.end()) ? 0 : (hx::Object *) (i->second);
 
@@ -2570,7 +2529,7 @@ unsigned int __hxcpp_obj_hash(Dynamic inObj)
         return 0;
     }
 
-    uintptr_t ptr = (uintptr_t) inObj.mPtr;
+    uintptr_t ptr = (uintptr_t) inObj->__GetRealObject();
 
     if (sizeof(ptr) > 4) {
         return (ptr >> 2) ^ (ptr >> 31);
@@ -2612,7 +2571,7 @@ int __hxcpp_gc_used_bytes()
 }
 
 
-double __hxcpp_gc_mem_info(int which)
+int __hxcpp_gc_mem_info(int which)
 {
     switch (which) {
     case 1:
@@ -2715,7 +2674,7 @@ void hx::GCChangeManagedMemory(int, const char *)
 
 static bool debug_write(char *buf, uint32_t size);
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
 static pthread_mutex_t g_write_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
@@ -2820,7 +2779,7 @@ struct AllocDetails
 
 static bool g_dump_on_gc;
 static int g_debug_socket = -1;
-static hx::UnorderedMap<void *, AllocDetails> g_details;
+static STD_MAP<void *, AllocDetails> g_details;
 
 // These are loaded once.  They are just all of the ranges of mapped memory
 // regions of the process.
@@ -3069,13 +3028,13 @@ static void debug_alloc(void *ptr, uint32_t size)
 {
     uint32_t timeOffsetMs = (nowUs() - g_zero_time_us) / 1000;
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
     AllocDetails &ad = g_details[ptr];
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_unlock(&g_write_lock);
 #endif
     
@@ -3086,7 +3045,7 @@ static void debug_alloc(void *ptr, uint32_t size)
     ad.frame_count = backtrace
         (ad.frames, (sizeof(ad.frames) / sizeof(ad.frames[0])));
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
@@ -3098,7 +3057,7 @@ static void debug_alloc(void *ptr, uint32_t size)
         g_alloc_count = 0;
     }
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_unlock(&g_write_lock);
 #endif
 }
@@ -3178,13 +3137,13 @@ static void debug_mark(void *ptr, void *ref)
         buf[index++] = (((uint32_t) ref) >>  0) & 0xFF;
     }
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
     debug_write(buf, index);
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_unlock(&g_write_lock);
 #endif
 }
@@ -3192,13 +3151,13 @@ static void debug_mark(void *ptr, void *ref)
 
 static void debug_sweep(void *ptr)
 {
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
     g_details.erase(ptr);
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_unlock(&g_write_lock);
 #endif
 }
@@ -3211,13 +3170,13 @@ static void debug_live(void *ptr)
     }
     
     // Send an allocation record to the debug client
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
     g_details[ptr].dump(ptr, g_debug_socket);
     
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_unlock(&g_write_lock);
 #endif
 }
@@ -3251,31 +3210,15 @@ static void debug_after_gc(uint32_t mark_us, uint32_t sweep_us,
     buf[index++] = ((total_us >>  8) & 0xFF);
     buf[index++] = ((total_us >>  0) & 0xFF);
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_lock(&g_write_lock);
 #endif
     
     debug_write(buf, index);
 
-#if (TIVOCONFIG_GC_THREAD_COUNT > 0)
+#if (TIVOCONFIG_GC_THREAD_COUNT > 1)
     pthread_mutex_unlock(&g_write_lock);
 #endif
 }
 
 #endif
-
-
-// Extra crap required by StackContext
-namespace hx
-{
-
-bool gMultiThreadMode = true;
-
-// Never used
-StackContext *gMainThreadContext;
-
-// Always used
-DECLARE_FAST_TLS_DATA(StackContext, tlsStackContext);
-
-
-}

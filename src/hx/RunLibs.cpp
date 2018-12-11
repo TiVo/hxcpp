@@ -19,13 +19,11 @@ std::string sgResultBuffer;
 std::wstring sgResultBuffer;
 #endif
 
-HXCPP_EXTERN_CLASS_ATTRIBUTES const HX_CHAR *hxRunLibrary()
+const HX_CHAR *hxRunLibrary()
 {
-   #if (HXCPP_API_LEVEL<330)
    std_register_prims();
    regexp_register_prims();
    zlib_register_prims();
-   #endif
     
    try { 
       __hxcpp_lib_main();

@@ -146,7 +146,6 @@
   <compilerflag value="-DTIVOCONFIG_GC_SIZE_STATISTICS_THRESHOLD=${TIVOCONFIG_GC_SIZE_STATISTICS_THRESHOLD}" if="TIVOCONFIG_GC_SIZE_STATISTICS_THRESHOLD" />
   <compilerflag value="-DTIVOCONFIG_GC_COLLECT_STACK_TRACES" if="TIVOCONFIG_GC_COLLECT_STACK_TRACES" />
 
-  <precompiledheader name="hxcpp" dir="${HXCPP}/include" if="USE_PRECOMPILED_HEADERS"/>
 
   <file name = "src/hx/Anon.cpp"/>
   <file name = "src/hx/Boot.cpp"/>
@@ -161,7 +160,6 @@
   <file name = "src/hx/Object.cpp"/>
   <file name = "src/hx/StdLibs.cpp" tags="haxe,static" />
   <file name = "src/hx/Debug.cpp"/>
-  <file name = "src/hx/Debugger.cpp" if="HXCPP_DEBUGGER" />
   <file name = "src/hx/Telemetry.cpp" if="HXCPP_TELEMETRY" />
   <file name = "src/hx/Profiler.cpp" if="HXCPP_PROFILER" />
   <file name = "src/hx/Thread.cpp"/>

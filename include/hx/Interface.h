@@ -1,7 +1,6 @@
 #ifndef HX_INTERFACE_H
 #define HX_INTERFACE_H
 
-#if (HXCPP_API_LEVEL < 330)
 namespace hx
 {
 
@@ -21,9 +20,9 @@ public:
 	const char * __CStr() const;
 	::String toString();
 	bool __HasField(const ::String &);
-   hx::Val __Field(const ::String &, hx::PropertyAccess inCallProp);
+	Dynamic __Field(const ::String &, hx::PropertyAccess inCallProp);
 	Dynamic __IField(int);
-   hx::Val __SetField(const ::String &,const hx::Val &, hx::PropertyAccess inCallProp);
+	Dynamic __SetField(const ::String &,const Dynamic &, hx::PropertyAccess inCallProp);
 	void __SetThis(Dynamic);
 	void __GetFields(Array< ::String> &);
 	hx::Class __GetClass() const;
@@ -35,8 +34,6 @@ public:
 };
 
 }
-
-#endif
 
 #endif
 

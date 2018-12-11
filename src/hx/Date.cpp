@@ -5,24 +5,17 @@
 
 #ifdef HX_WINDOWS
    #include <windows.h>
+   #include <shlobj.h>
 #else
+   #ifdef EPPC
+      #include <time.h>
+   #else
+      #include <sys/time.h>
+   #endif
    #include <stdint.h>
-   #if defined(__unix__) || defined(__APPLE__)
+   #ifdef HX_LINUX
       #include <unistd.h>
       #include <stdio.h>
-      #if (_POSIX_VERSION >= 1)
-         #define USE_TIME_R
-      #endif
-      #if (_POSIX_VERSION >= 199309L)
-         #include <sys/time.h>
-         #define USE_CLOCK_GETTIME
-         #define USE_GETTIMEOFDAY
-      #endif
-   #endif
-   #if defined(__ORBIS__)
-      // fill in for a missing localtime_r with localtime_s
-      #define localtime_r localtime_s
-      #define gmtime_r gmtime_s
    #endif
 #endif
 
@@ -75,17 +68,19 @@ double __hxcpp_time_stamp()
 #else
    #if defined(IPHONE) || defined(APPLETV)
       double t = CACurrentMediaTime();
-   #elif defined(USE_GETTIMEOFDAY)
+   #elif defined(GPH) || defined(HX_LINUX) || defined(EMSCRIPTEN)
       struct timeval tv;
       if( gettimeofday(&tv,NULL) )
          return 0;
       double t =  ( tv.tv_sec + ((double)tv.tv_usec) / 1000000.0 );
-   #elif defined(USE_CLOCK_GETTIME)
+   #elif defined(EPPC)
+      time_t tod;
+      time(&tod);
+      double t = (double)tod;
+   #else
       struct timespec ts;
       clock_gettime(CLOCK_MONOTONIC, &ts);
       double t =  ( ts.tv_sec + ((double)ts.tv_nsec)*1e-9  );
-   #else
-      double t = (double)clock() * (1.0 / CLOCKS_PER_SEC);
    #endif
    if (t0==0) t0 = t;
    return t-t0;
@@ -98,14 +93,14 @@ double __hxcpp_time_stamp()
 void __internal_localtime(double inSeconds, struct tm* time)
 {
    time_t t = (time_t) inSeconds;
-   #ifdef USE_TIME_R
-   localtime_r(&t, time);
-   #else
+   #ifdef HX_WINDOWS
    struct tm *result = localtime(&t);
    if (result)
       *time = *result;
    else
       memset(time, 0, sizeof(*time) );
+   #else
+   localtime_r(&t, time);
    #endif
 }
 
@@ -115,10 +110,10 @@ void __internal_localtime(double inSeconds, struct tm* time)
 void __internal_gmtime(double inSeconds, struct tm* time)
 {
    time_t t = (time_t) inSeconds;
-   #ifdef USE_TIME_R
-   gmtime_r(&t, time);
-   #else
+   #ifdef HX_WINDOWS
    *time = *gmtime(&t);
+   #else
+   gmtime_r(&t, time);
    #endif
 }
 
@@ -302,17 +297,10 @@ double __hxcpp_date_now()
 
    return (double)( (long) ((ularge.QuadPart - EPOCH) / 10000000L) ) +
           system_time.wMilliseconds*0.001;
-   #elif defined(USE_GETTIMEOFDAY)
+   #else
    struct timeval tv;
    gettimeofday(&tv, 0);
    return (tv.tv_sec + (((double) tv.tv_usec) / (1000 * 1000)));
-   #else
-   // per-second time resolution. not ideal, but OK given the docs for Date.now
-   time_t t;
-   struct tm ti;
-   time(&t);
-   __internal_localtime((double)t, &ti);
-   return mktime(&ti);
    #endif
 }
 
@@ -336,7 +324,7 @@ double __hxcpp_timezone_offset(double inSeconds)
    struct tm localTime;
    __internal_localtime( inSeconds, &localTime);
 
-   #if defined(HX_WINDOWS) || defined(__SNC__) || defined(__ORBIS__)
+   #ifdef HX_WINDOWS
    struct tm gmTime;
    __internal_gmtime(inSeconds, &gmTime );
 

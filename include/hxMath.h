@@ -11,8 +11,6 @@
 class HXCPP_EXTERN_CLASS_ATTRIBUTES Math_obj : public hx::Object
 {
 public:
-   HX_IS_INSTANCE_OF enum { _hx_ClassId = hx::clsIdMath };
-
    typedef hx::Object super;
    typedef Math_obj OBJ_;
    HX_DO_RTTI;

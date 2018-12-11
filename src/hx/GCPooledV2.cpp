@@ -96,12 +96,15 @@
 #include <string.h>
 #include <time.h>
 #if (defined HX_MACOS || defined APPLETV || defined IPHONE)
+#define USE_STD_MAP
+#else
+#include <tr1/unordered_map>
+#endif
 #include <unistd.h>
 #include <vector>
 
 #include "hxcpp.h"
 #include "hx/GC.h"
-#include "hx/Unordered.h"
 #include "Hash.h"
 
 #ifdef TIVO_STB
@@ -242,6 +245,13 @@ static void clear_stacktrace(void *ptr);
 #endif
 
 
+// Mac OS X implementation of std::tr1::unordered_map is buggy?
+#ifdef USE_STD_MAP
+#define STD_MAP std::map
+#else
+#define STD_MAP std::tr1::unordered_map
+#endif
+
 // Enable process logging only on STB targets
 #ifdef TIVO_STB
 #define PLOG(type, data_len, data) process_log(type, data_len, data)
@@ -300,8 +310,8 @@ static void clear_stacktrace(void *ptr);
 // This is the Object to id mapping; this is unfortunate stuff but the GC API
 // requires it.  Everything in here is protected by g_lock.
 #ifdef HXCPP_M64
-static hx::UnorderedMap<uintptr_t, int> g_obj_map;
-static hx::UnorderedMap<int, uintptr_t> g_id_map;
+static STD_MAP<uintptr_t, int> g_obj_map;
+static STD_MAP<int, uintptr_t> g_id_map;
 static int g_current_id;
 #endif
 
@@ -1182,7 +1192,7 @@ static pthread_cond_t g_cond = PTHREAD_COND_INITIALIZER;
 #endif
 
 // This maps allocations to the weak refs to them.  Protected by g_lock.
-static hx::UnorderedMap<void *, std::list<GCWeakRef *> > g_weak_ref_map;
+static STD_MAP<void *, std::list<GCWeakRef *> > g_weak_ref_map;
 
 // Garbage collection can be temporarily disabled, although it's not clear why
 // this would ever be done.  Start GC disabled until it is ready, this
@@ -1195,7 +1205,7 @@ static Root *g_roots;
 
 // This maps objects to finalizer data - it is expected that very few
 // finalizers will be used
-static hx::UnorderedMap<hx::Object *, FinalizerData> g_finalizers;
+static STD_MAP<hx::Object *, FinalizerData> g_finalizers;
 
 // Hxcpp includes a "weak hash" class that needs GC-side support
 static std::list<hx::HashBase<Dynamic> *> g_weak_hash_list;
@@ -1232,7 +1242,7 @@ static uint32_t g_recent_allocs_frames =
 #ifdef TIVOCONFIG_GC_SIZE_STATISTICS_THRESHOLD
 static uint32_t g_size_statistics_threshold =
     TIVOCONFIG_GC_SIZE_STATISTICS_THRESHOLD;
-static hx::UnorderedMap<uint32_t, uint32_t> g_size_statistics;
+static STD_MAP<uint32_t, uint32_t> g_size_statistics;
 #if !HXCPP_SINGLE_THREADED_APP
 #endif
 #endif
@@ -1439,7 +1449,7 @@ static void check_size_statistics_threshold(uint32_t size)
 
     // Get a sorted list of keys
     std::vector<uint32_t> keys;
-    hx::UnorderedMap<uint32_t, uint32_t>::iterator it = g_size_statistics.begin();
+    STD_MAP<uint32_t, uint32_t>::iterator it = g_size_statistics.begin();
     while (it != g_size_statistics.end()) {
         keys.push_back(it->first);
         total += it->second;
@@ -1614,8 +1624,16 @@ static void RunFinalizer(hx::Object *obj)
 // threads, so no locking is necessary
 static void HandleWeakRefs()
 {
-    hx::UnorderedMap<void *, std::list<GCWeakRef *> >::iterator iter =
+#ifdef USE_STD_MAP
+    std::map<void *, std::list<GCWeakRef *> >::iterator iter =
         g_weak_ref_map.begin();
+    // Must accumulate elements to remove since the iterator cannot be
+    // disturbed in pre-C++11 (such as Mac OS X)
+    std::list<void *> removeList;
+#else
+    std::tr1::unordered_map<void *, std::list<GCWeakRef *> >::iterator iter =
+        g_weak_ref_map.begin();
+#endif
 
     while (iter != g_weak_ref_map.end()) {
         Entry *entry = ENTRY_FROM_PTR(iter->first);
@@ -1648,8 +1666,21 @@ static void HandleWeakRefs()
         while (iter2 != refs.end()) {
             (*iter2++)->mRef.mPtr = 0;
         }
+#ifdef USE_STD_MAP
+        removeList.push_back(iter->first);
+        iter++;
+#else
         iter = g_weak_ref_map.erase(iter);
+#endif
     }
+
+#ifdef USE_STD_MAP
+    std::list<void *>::iterator removeIter = removeList.begin();
+    while (removeIter != removeList.end()) {
+        g_weak_ref_map.erase(*removeIter);
+        removeIter++;
+    }
+#endif
 }
 
 
@@ -1658,7 +1689,7 @@ static void HandleWeakRefs()
 static void RemoveWeakRef(GCWeakRef *wr)
 {
     void *ptr = wr->mRef.mPtr;
-    hx::UnorderedMap<void *, std::list<GCWeakRef *> >::iterator iter = 
+    STD_MAP<void *, std::list<GCWeakRef *> >::iterator iter = 
         g_weak_ref_map.find(ptr);
     if (iter == g_weak_ref_map.end()) {
         return;
@@ -2644,7 +2675,7 @@ int __hxcpp_obj_id(Dynamic inObj)
 
     Lock();
     
-    hx::UnorderedMap<uintptr_t, int>::iterator i = g_obj_map.find(ptr);
+    STD_MAP<uintptr_t, int>::iterator i = g_obj_map.find(ptr);
 
     if (i != g_obj_map.end()) {
         Unlock();
@@ -2671,7 +2702,7 @@ hx::Object *__hxcpp_id_obj(int id)
 
     Lock();
     
-    hx::UnorderedMap<int, uintptr_t>::iterator i = g_id_map.find(id);
+    STD_MAP<int, uintptr_t>::iterator i = g_id_map.find(id);
 
     hx::Object *ret = (i == g_id_map.end()) ? 0 : (hx::Object *) (i->second);
 

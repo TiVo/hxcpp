@@ -63,13 +63,21 @@ static size_t capture_backtrace(uintptr_t *buffer, size_t max)
 
 static void setup_signals(void (*handler)(int))
 {
-    // Experience shows that SEGV is the only signal that really is ever
-    // received unexpectedly by a haxe program, but do BUS and ILL too since
-    // these seem reasonable
-
     static struct sigaction sa_sigsegv_old;
     static struct sigaction sa_sigbus_old;
     static struct sigaction sa_sigill_old;
+    static struct sigaction sa_sighup_old;
+    static struct sigaction sa_sigint_old;
+    static struct sigaction sa_sigfpe_old;
+    static struct sigaction sa_sigusr2_old;
+    static struct sigaction sa_sigalrm_old;
+    static struct sigaction sa_sigterm_old;
+    static struct sigaction sa_sigstop_old;
+    static struct sigaction sa_sigxcpu_old;
+    static struct sigaction sa_sigxfsz_old;
+    static struct sigaction sa_sigvtalrm_old;
+    static struct sigaction sa_sigsys_old;
+    static struct sigaction sa_sigtrap_old;
 
     if (handler) {
         struct sigaction sa;
@@ -78,11 +86,35 @@ static void setup_signals(void (*handler)(int))
         sigaction(SIGSEGV, &sa, &sa_sigsegv_old);
         sigaction(SIGBUS, &sa, &sa_sigbus_old);
         sigaction(SIGILL, &sa, &sa_sigill_old);
+        sigaction(SIGHUP, &sa, &sa_sighup_old);
+        sigaction(SIGINT, &sa, &sa_sigint_old);
+        sigaction(SIGFPE, &sa, &sa_sigfpe_old);
+        sigaction(SIGSYS, &sa, &sa_sigsys_old);
+        sigaction(SIGUSR2, &sa, &sa_sigusr2_old);
+        sigaction(SIGALRM, &sa, &sa_sigalrm_old);
+        sigaction(SIGTERM, &sa, &sa_sigterm_old);
+        sigaction(SIGSTOP, &sa, &sa_sigstop_old);
+        sigaction(SIGXCPU, &sa, &sa_sigxcpu_old);
+        sigaction(SIGXFSZ, &sa, &sa_sigxfsz_old);
+        sigaction(SIGTRAP, &sa, &sa_sigtrap_old);
+        sigaction(SIGVTALRM, &sa, &sa_sighup_old);
     }
     else {
         sigaction(SIGSEGV, &sa_sigsegv_old, 0);
         sigaction(SIGBUS, &sa_sigbus_old, 0);
         sigaction(SIGILL, &sa_sigill_old, 0);
+        sigaction(SIGHUP, &sa_sighup_old, 0);
+        sigaction(SIGINT, &sa_sigint_old, 0);
+        sigaction(SIGFPE, &sa_sigfpe_old, 0);
+        sigaction(SIGSYS, &sa_sigsys_old, 0);
+        sigaction(SIGUSR2, &sa_sigusr2_old, 0);
+        sigaction(SIGALRM, &sa_sigalrm_old, 0);
+        sigaction(SIGTERM, &sa_sigterm_old, 0);
+        sigaction(SIGSTOP, &sa_sigstop_old, 0);
+        sigaction(SIGXCPU, &sa_sigxcpu_old, 0);
+        sigaction(SIGXFSZ, &sa_sigxfsz_old, 0);
+        sigaction(SIGTRAP, &sa_sigtrap_old, 0);
+        sigaction(SIGVTALRM, &sa_sighup_old, 0);
     }
 }
 
@@ -90,7 +122,7 @@ static void signal_handler(int code)
 {
     // In case of recursive signal, revert to prior handling
     // setup_signals(0);
-    
+
     char codestr[64];
     snprintf(codestr, sizeof(codestr), "Signal caught: %d", code);
 

@@ -111,6 +111,7 @@ class Builder
             var isStatic = false;
             if (target.substr(0,7)=="static-")
             {
+                trace("Because target is " + target + ", will be static_link");
                isStatic = true;
                target = target.substr(7);
             }
@@ -216,7 +217,7 @@ class Builder
    }
 
    public function allowNdll() { return true; }
-   public function allowStatic() { return true; }
+   public function allowStatic() { return false; }
    public function wantLegacyIosBuild() { return false; }
    public function wantWindows64() { return false; }
 

@@ -10,6 +10,66 @@
 namespace hx
 {
 
+static MyMutex *sCppiaCtxLock = 0;
+
+DECLARE_TLS_DATA(CppiaCtx,tlsCppiaCtx)
+
+CppiaCtx sCppiaCtx;
+
+static std::vector<CppiaCtx *> sAllContexts;
+
+CppiaCtx::CppiaCtx()
+{
+   stack = new unsigned char[128*1024];
+   pointer = &stack[0];
+   push((hx::Object *)0);
+   frame = pointer;
+   exception = 0;
+   returnJumpBuf = 0;
+   loopJumpBuf = 0;
+   breakContReturn = 0;
+}
+
+CppiaCtx::~CppiaCtx()
+{
+   delete [] stack;
+}
+
+
+CppiaCtx *CppiaCtx::getCurrent()
+{
+   CppiaCtx *result = tlsCppiaCtx;
+   if (!result)
+   {
+      tlsCppiaCtx = result = new CppiaCtx();
+
+      if (!sCppiaCtxLock)
+         sCppiaCtxLock = new MyMutex();
+      sCppiaCtxLock->Lock();
+      sAllContexts.push_back(result);
+      sCppiaCtxLock->Unlock();
+   }
+   return result;
+}
+
+void CppiaCtx::mark(hx::MarkContext *__inCtx)
+{
+   hx::MarkConservative((int *)(stack), (int *)(pointer),__inCtx);
+}
+
+void scriptMarkStack(hx::MarkContext *__inCtx)
+{
+   MyMutex *m = sCppiaCtxLock;
+   if (m)
+       m->Lock();
+
+   for(int i=0;i<sAllContexts.size();i++)
+      sAllContexts[i]->mark(__inCtx);
+
+   if (m)
+       m->Unlock();
+}
+
 
 #ifdef DEBUG_RETURN_TYPE
    #define DEBUG_RETURN_TYPE_CHECK \
@@ -19,21 +79,52 @@ namespace hx
 #endif
 
 
+#ifdef SJLJ_RETURN
+
+struct AutoJmpBuf
+{
+   CppiaCtx *ctx;
+   jmp_buf here;
+   jmp_buf *old;
+  
+   AutoJmpBuf(CppiaCtx *inCtx) : ctx(inCtx)
+   {
+      old = ctx->returnJumpBuf;
+      ctx->returnJumpBuf = &here;
+   }
+   ~AutoJmpBuf() { ctx->returnJumpBuf = old; }
+};
+
 #define GET_RETURN_VAL(RET,CHECK) \
-   ((ScriptCallable *)vtable)->runFunction(this); \
+   CPPIA_STACK_FRAME(((CppiaExpr *)vtable)); \
+   AutoJmpBuf autoJmpBuf(this); \
+   if (setjmp(autoJmpBuf.here)) \
+   { \
+       DEBUG_RETURN_TYPE_CHECK \
+       RET; \
+   } \
+   ((CppiaExpr *)vtable)->runFunction(this);
+
+#else
+
+#define GET_RETURN_VAL(RET,CHECK) \
+   CPPIA_STACK_FRAME(((CppiaExpr *)vtable)); \
+   ((CppiaExpr *)vtable)->runFunction(this); \
    breakContReturn = 0; \
    DEBUG_RETURN_TYPE_CHECK \
    RET;
+
+#endif
  
 
-void StackContext::runVoid(void *vtable)
+void CppiaCtx::runVoid(void *vtable)
 {
    if (breakContReturn) return;
    GET_RETURN_VAL(return,etVoid);
    /* Reached end of routine without return */
 }
 
-int StackContext::runInt(void *vtable)
+int CppiaCtx::runInt(void *vtable)
 {
    if (breakContReturn) return 0;
    GET_RETURN_VAL(return getInt(), etInt );
@@ -41,7 +132,7 @@ int StackContext::runInt(void *vtable)
    // Should not really get here...
    return 0;
 }
-Float StackContext::runFloat(void *vtable)
+Float CppiaCtx::runFloat(void *vtable)
 {
    if (breakContReturn) return 0;
    GET_RETURN_VAL(return getFloat(),etFloat );
@@ -49,7 +140,7 @@ Float StackContext::runFloat(void *vtable)
    //printf("No Float return?\n");
    return 0;
 }
-String StackContext::runString(void *vtable)
+String CppiaCtx::runString(void *vtable)
 {
    if (breakContReturn) return String();
    GET_RETURN_VAL(return getString(),etString );
@@ -57,14 +148,14 @@ String StackContext::runString(void *vtable)
    //printf("No String return?\n");
    return null();
 }
-Dynamic StackContext::runObject(void *vtable)
+Dynamic CppiaCtx::runObject(void *vtable)
 {
    if (breakContReturn) return null();
    GET_RETURN_VAL(return getObject(),etObject );
    //printf("No Object return?\n");
    return null();
 }
-hx::Object *StackContext::runObjectPtr(void *vtable)
+hx::Object *CppiaCtx::runObjectPtr(void *vtable)
 {
    if (breakContReturn) return 0;
    GET_RETURN_VAL(return getObjectPtr(),etObject );
@@ -73,7 +164,7 @@ hx::Object *StackContext::runObjectPtr(void *vtable)
 }
 
 
-int runContextConvertInt(StackContext *ctx, ExprType inType, void *inFunc)
+int runContextConvertInt(CppiaCtx *ctx, ExprType inType, void *inFunc)
 {
    switch(inType)
    {
@@ -87,7 +178,7 @@ int runContextConvertInt(StackContext *ctx, ExprType inType, void *inFunc)
 }
 
 
-Float runContextConvertFloat(StackContext *ctx, ExprType inType, void *inFunc)
+Float runContextConvertFloat(CppiaCtx *ctx, ExprType inType, void *inFunc)
 {
    switch(inType)
    {
@@ -100,7 +191,7 @@ Float runContextConvertFloat(StackContext *ctx, ExprType inType, void *inFunc)
    return 0;
 }
 
-String runContextConvertString(StackContext *ctx, ExprType inType, void *inFunc)
+String runContextConvertString(CppiaCtx *ctx, ExprType inType, void *inFunc)
 {
    switch(inType)
    {
@@ -114,7 +205,7 @@ String runContextConvertString(StackContext *ctx, ExprType inType, void *inFunc)
    return 0;
 }
 
-hx::Object *runContextConvertObject(StackContext *ctx, ExprType inType, void *inFunc)
+hx::Object *runContextConvertObject(CppiaCtx *ctx, ExprType inType, void *inFunc)
 {
    switch(inType)
    {
@@ -134,4 +225,5 @@ hx::Object *runContextConvertObject(StackContext *ctx, ExprType inType, void *in
 
 
 } // end namespace hx
+
 

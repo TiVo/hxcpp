@@ -62,9 +62,10 @@ void CppiaVar::clear()
    offset = 0;
    type = 0;
    objVal.mPtr = 0;
+   boolVal = 0;
    intVal = 0;
    floatVal = 0;
-   stringVal = String();
+   stringVal = 0;
    valPointer = 0;
    storeType = fsUnknown;
    dynamicFunction = 0;
@@ -101,7 +102,7 @@ void CppiaVar::linkVarTypes(CppiaModule &cppia)
 
       switch(storeType)
       {
-         case fsBool:
+         case fsBool: valPointer = &boolVal;  break;
          case fsByte:
          case fsInt: valPointer = &intVal;  break;
          case fsFloat: valPointer = &floatVal; break;
@@ -114,20 +115,14 @@ void CppiaVar::linkVarTypes(CppiaModule &cppia)
    }
 }
 
-bool CppiaVar::hasPointer()
-{
-   return storeType==fsString || storeType==fsObject;
-}
-
 
 Dynamic CppiaVar::getStaticValue()
 {
    switch(storeType)
    {
       case fsByte: return *(unsigned char *)(valPointer);
-      case fsBool:
-      case fsInt: 
-                   return *(int *)(valPointer);
+      case fsInt: return *(int *)(valPointer);
+      case fsBool: return *(bool *)(valPointer);
       case fsFloat: return *(Float *)(valPointer);
       case fsString: return *(String *)(valPointer);
       case fsObject: return *(hx::Object **)(valPointer);
@@ -143,8 +138,8 @@ Dynamic CppiaVar::setStaticValue(Dynamic inValue)
    switch(storeType)
    {
       case fsByte: *(unsigned char *)(valPointer) = inValue; return inValue;
-      case fsBool: 
       case fsInt: *(int *)(valPointer) = inValue; return inValue;
+      case fsBool: *(bool *)(valPointer) = inValue; return inValue;
       case fsFloat: *(Float *)(valPointer) = inValue; return inValue;
       case fsString: *(String *)(valPointer) = inValue; return inValue;
       case fsObject: *(hx::Object **)(valPointer) = inValue.mPtr; return inValue;
@@ -237,10 +232,10 @@ Dynamic CppiaVar::setValue(hx::Object *inThis, Dynamic inValue)
                   *(hx::Object **)(base) = inValue.mPtr;
                   break;
                case arrBool:
-                  *(Array<bool> *)(base) = inValue;
+                  *(Array<Bool> *)(base) = inValue;
                   break;
                case arrInt:
-                  *(Array<int> *)(base) = inValue;
+                  *(Array<Int> *)(base) = inValue;
                   break;
                case arrFloat:
                   *(Array<Float> *)(base) = inValue;
@@ -302,7 +297,7 @@ void CppiaVar::runInit(CppiaCtx *ctx)
       else if (init)
          switch(storeType)
          {
-            case fsBool:
+            case fsBool: boolVal = init->runInt(ctx); break;
             case fsByte:
             case fsInt: intVal = init->runInt(ctx); break;
             case fsFloat: floatVal = init->runFloat(ctx); break;
@@ -319,14 +314,12 @@ void CppiaVar::mark(hx::MarkContext *__inCtx)
    HX_MARK_MEMBER(objVal);
    HX_MARK_MEMBER(name);
 }
-#ifdef HXCPP_VISIT_ALLOCS
 void CppiaVar::visit(hx::VisitContext *__inCtx)
 {
    HX_VISIT_MEMBER(stringVal);
    HX_VISIT_MEMBER(objVal);
    HX_VISIT_MEMBER(name);
 }
-#endif
 
 
 
@@ -349,15 +342,11 @@ CppiaStackVar::CppiaStackVar()
    id = 0;
    capture = false;
    typeId = 0;
-   defaultStackPos = -1;
    stackPos = 0;
    fromStackPos = 0;
    capturePos = 0;
    expressionType = etNull;
-   argType = expressionType;
    storeType = fsUnknown;
-   type = 0;
-   module = 0;
 }
 
 CppiaStackVar::CppiaStackVar(CppiaStackVar *inVar,int &ioSize, int &ioCaptureSize)
@@ -367,10 +356,7 @@ CppiaStackVar::CppiaStackVar(CppiaStackVar *inVar,int &ioSize, int &ioCaptureSiz
    sVarIdNameMap[id] = nameId;
    capture = inVar->capture;
    typeId = inVar->typeId;
-   type = inVar->type;
    expressionType = inVar->expressionType;
-   argType = expressionType;
-   defaultStackPos = -1;
 
    fromStackPos = inVar->stackPos;
    storeType = inVar->storeType;
@@ -378,7 +364,6 @@ CppiaStackVar::CppiaStackVar(CppiaStackVar *inVar,int &ioSize, int &ioCaptureSiz
    capturePos = ioCaptureSize;
    ioSize += sTypeSize[expressionType];
    ioCaptureSize += sTypeSize[expressionType];
-   module = inVar->module;
 }
 
 
@@ -390,57 +375,32 @@ void CppiaStackVar::fromStream(CppiaStream &stream)
    typeId = stream.getInt();
 }
 
-void CppiaStackVar::setInFrame(unsigned char *inFrame,Dynamic inValue)
+void CppiaStackVar::set(CppiaCtx *inCtx,Dynamic inValue)
 {
-   unsigned char *ptr = inFrame + stackPos;
    switch(storeType)
    {
       case fsByte:
-         *(unsigned char *)(ptr) = (int)inValue;
+         *(unsigned *)(inCtx->frame + stackPos) = (int)inValue;
          break;
       case fsBool:
-         *(bool *)(ptr) = inValue;
+         *(bool *)(inCtx->frame + stackPos) = inValue;
          break;
       case fsInt:
-         *(int *)(ptr) = inValue;
+         *(int *)(inCtx->frame + stackPos) = inValue;
          break;
       case fsFloat:
-         SetFloatAligned(ptr,inValue);
+         SetFloatAligned(inCtx->frame + stackPos,inValue);
          break;
       case fsString:
-         *(String *)(ptr) = inValue;
+         *(String *)(inCtx->frame + stackPos) = inValue;
          break;
       case fsObject:
-         *(hx::Object **)(ptr) = inValue.mPtr;
+         *(hx::Object **)(inCtx->frame + stackPos) = inValue.mPtr;
          break;
       case fsUnknown:
          break;
    }
 }
-
-void CppiaStackVar::set(CppiaCtx *inCtx,Dynamic inValue)
-{
-   setInFrame( inCtx->frame, inValue );
-}
-
-
-Dynamic CppiaStackVar::getInFrame(const unsigned char *inFrame)
-{
-   const unsigned char *ptr = inFrame + stackPos;
-   switch(storeType)
-   {
-      case fsByte: return *(unsigned char *)ptr;
-      case fsBool: return *(bool *)ptr;
-      case fsInt: return *(int *)ptr;
-      case fsFloat: return *(Float *)ptr;
-      case fsString: return *(String *)ptr;
-      case fsObject: return  *(hx::Object **)ptr;
-      case fsUnknown:
-         break;
-   }
-   return null();
-}
-
 
 void CppiaStackVar::markClosure(char *inBase, hx::MarkContext *__inCtx)
 {
@@ -456,7 +416,6 @@ void CppiaStackVar::markClosure(char *inBase, hx::MarkContext *__inCtx)
    }
 }
 
-#ifdef HXCPP_VISIT_ALLOCS
 void CppiaStackVar::visitClosure(char *inBase, hx::VisitContext *__inCtx)
 {
    switch(storeType)
@@ -470,195 +429,15 @@ void CppiaStackVar::visitClosure(char *inBase, hx::VisitContext *__inCtx)
       default: ;
    }
 }
-#endif
 
-void CppiaStackVar::link(CppiaModule &inModule, bool hasDefault)
+void CppiaStackVar::link(CppiaModule &inModule)
 {
    expressionType = inModule.types[typeId]->expressionType;
-   argType = hasDefault ? ( expressionType==etString ? etString : etObject) : expressionType;
    storeType = typeId==0 ? fsObject : fieldStorageFromType(inModule.types[typeId]);
    inModule.layout->varMap[id] = this;
    stackPos = inModule.layout->size;
-   defaultStackPos =stackPos;
-   inModule.layout->size += sTypeSize[argType];
-   type = inModule.types[typeId];
-   module = &inModule;
+   inModule.layout->size += sTypeSize[expressionType];
 }
-
-
-void CppiaStackVar::linkDefault()
-{
-   if (expressionType==etFloat && sizeof(double)>sizeof(hx::Object *) )
-   {
-      stackPos = module->layout->size;
-      module->layout->size += sTypeSize[expressionType];
-   }
-}
-
-void CppiaStackVar::setDefault(CppiaCtx *inCxt, const CppiaConst &inDefault)
-{
-   if (argType==etString)
-   {
-      if (inDefault.type == CppiaConst::cString)
-      {
-         String *s = (String *)(inCxt->frame + defaultStackPos);
-         if (!s->__s)
-            *s = module->strings[ inDefault.ival ];
-      }
-   }
-   else
-   {
-      hx::Object *src = *(hx::Object **)(inCxt->frame + defaultStackPos);
-
-      if (src)
-      {
-         setInFrame(inCxt->frame, src);
-      }
-      else
-      {
-         unsigned char *ptr = inCxt->frame + stackPos;
-         switch(storeType)
-         {
-            case fsByte: *(unsigned char *)ptr = inDefault.ival; break;
-            case fsBool: *(bool *)ptr = inDefault.ival; break;
-            case fsInt: *(int *)ptr =
-                 inDefault.type==CppiaConst::cInt ? inDefault.ival :
-                                                    inDefault.dval;
-                 break;
-            case fsFloat: *(Float *)ptr =
-                 inDefault.type==CppiaConst::cInt ? inDefault.ival :
-                                                    inDefault.dval;
-               break;
-            case fsObject:
-               {
-                  Dynamic &d = *(Dynamic *)ptr;
-                  if (inDefault.type==CppiaConst::cInt)
-                     d = inDefault.ival;
-                  else if (inDefault.type==CppiaConst::cFloat)
-                     d = inDefault.dval;
-                  else if (inDefault.type==CppiaConst::cString)
-                     d =  module->strings[ inDefault.ival ];
-               }
-               break;
-            case fsString:
-            case fsUnknown:
-               break; // handled above, or not needed
- 
-         }
-      }
-   }
-}
-
-
-#ifdef CPPIA_JIT
-
-static int SLJIT_CALL objToInt(hx::Object *inVal)
-{
-   return inVal->__ToInt();
-}
-static void SLJIT_CALL objToFloat(hx::Object *inVal,double *outFloat)
-{
-   *outFloat =  inVal->__ToDouble();
-}
-static hx::Object *SLJIT_CALL intToObject(int inVal)
-{
-   return Dynamic(inVal).mPtr;
-}
-static hx::Object *SLJIT_CALL floatToObject(double * inVal)
-{
-   return Dynamic(*inVal).mPtr;
-}
-static hx::Object *SLJIT_CALL stringToObject(String * inVal)
-{
-   return Dynamic(*inVal).mPtr;
-}
-
-
-
-
-void CppiaStackVar::genDefault(CppiaCompiler *compiler, const CppiaConst &inDefault)
-{
-   if (argType==etString)
-   {
-      if (inDefault.type == CppiaConst::cString)
-      {
-         JumpId notNull = compiler->compare(cmpP_NOT_ZERO, JitFramePos(defaultStackPos+offsetof(String,__s)).as(jtPointer),(void *)0);
-         String val = module->strings[ inDefault.ival ];
-         compiler->move(JitFramePos(defaultStackPos).as(jtInt), (int)val.length);
-         compiler->move(JitFramePos(defaultStackPos+offsetof(String,__s)).as(jtPointer), (void *)val.__s);
-         compiler->comeFrom(notNull);
-      }
-   }
-   else
-   {
-      JitFramePos srcPos(defaultStackPos);
-      JitFramePos destPos(stackPos);
-      compiler->move( sJitTemp0, srcPos.as(jtPointer) );
-      JumpId notNull = compiler->compare(cmpP_NOT_ZERO, sJitTemp0, (void *)0);
-
-      switch(storeType)
-      {
-         case fsByte:
-         case fsBool: 
-            compiler->move( destPos.as(jtByte), JitVal(inDefault.ival).as(jtByte));
-            break;
-
-         case fsInt:
-            compiler->move( destPos.as(jtInt), inDefault.ival);
-             break;
-         case fsFloat:
-            compiler->move( sJitTemp0, (void *)&inDefault.dval);
-            compiler->move( destPos.as(jtFloat), sJitTemp0.star(jtFloat));
-            break;
-         case fsObject:
-            if (inDefault.type==CppiaConst::cInt)
-               compiler->callNative( (void *)intToObject, inDefault.ival );
-            else if (inDefault.type==CppiaConst::cFloat)
-               compiler->callNative( (void *)floatToObject, (void *)&inDefault.dval );
-            else if (inDefault.type==CppiaConst::cString)
-               compiler->callNative( (void *)stringToObject, (void *)&module->strings[ inDefault.ival ] );
-            else
-               break;
-            compiler->move(destPos.as(jtPointer), sJitReturnReg.as(jtPointer));
-            break;
-         case fsString: // handled
-         case fsUnknown: // ?
-            break;
-      }
-
-      JumpId defaultDone = compiler->jump();
-      compiler->comeFrom(notNull);
-
-      switch(storeType)
-      {
-         case fsByte:
-         case fsBool: 
-            compiler->callNative( (void *)objToInt, sJitTemp0.as(jtPointer) );
-            //compiler->move( destPos.as(jtByte), sJitReturnReg.as(jtByte));
-            compiler->move( destPos.as(jtInt), sJitReturnReg.as(jtInt));
-            break;
-
-         case fsInt:
-            compiler->callNative( (void *)objToInt, sJitTemp0.as(jtPointer) );
-            compiler->move( destPos.as(jtInt), sJitReturnReg.as(jtInt));
-             break;
-         case fsFloat:
-            compiler->callNative( (void *)objToFloat, sJitTemp0.as(jtPointer), destPos.as(jtFloat)) ;
-            break;
-         case fsObject:
-            // Should be same pos
-            //compiler->move(destPos.as(jtPointer), sJitTemp0.as(jtPointer));
-            break;
-         case fsString: // handled
-         case fsUnknown: // ?
-            break;
-      }
-
-      compiler->comeFrom(defaultDone);
-   }
-
-}
-#endif
 
 
 

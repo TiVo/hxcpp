@@ -38,7 +38,5 @@
 #undef TRANSPARENT
 #undef CONST
 #undef CopyFile
-#undef COLOR_HIGHLIGHT
-#undef __valid
 
 #endif

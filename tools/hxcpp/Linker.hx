@@ -226,12 +226,7 @@ class Linker
          }
 
          // Place list of obj files in a file called "all_objs"
-         // Total HACK - Mac OS X brain deadness means that libtool cannot
-         // process file names with commas in them -- but fortunately, the
-         // only cases that we (TiVo) care about mFromFile (because the object
-         // list is too long) don't have commas ...
-         if ((mFromFile != null) && (mFromFile != "") &&
-             (inCompiler.mObjDir.indexOf(",") == -1))
+         if (mFromFile!="")
          {
             PathManager.mkdir(tmpDir);
             var fname = tmpDir + "/all_objs";
@@ -241,32 +236,21 @@ class Linker
                fname = local.substr(hereLen);
 
             var fout = sys.io.File.write(fname,false);
-            // Total HACK -- if mFromFile is a "flag" argument, then use two
-            // separate arguments ... allows libtool on Mac OS X to work
-            if (mFromFile.indexOf("-") == -1) {
-                for (obj in objs) {
-                   fout.writeString('"' + obj + '"\n');
-                }
-                args.push(mFromFile + fname );
+            if (mFromFileNeedsQuotes)
+            {
+               for(obj in objs)
+                  fout.writeString('"' + obj + '"\n');
             }
-            else {
-                if (mFromFileNeedsQuotes)
-                {
-                    for(obj in objs)
-                        fout.writeString('"' + obj + '"\n');
-                }
-                else
-                {
-                    for(obj in objs)
-                        fout.writeString(obj + '\n');
-                }
-                fout.close();
-                var parts = mFromFile.split(" ");
-                var last = parts.pop();
-                args = args.concat(parts);
-                args.push(last + fname );
+            else
+            {
+               for(obj in objs)
+                  fout.writeString(obj + '\n');
             }
             fout.close();
+            var parts = mFromFile.split(" ");
+            var last = parts.pop();
+            args = args.concat(parts);
+            args.push(last + fname );
          }
          else
             args = args.concat(objs);

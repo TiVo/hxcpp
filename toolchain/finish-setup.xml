@@ -36,6 +36,8 @@
 <set name="STD_MODULE_LINK" value="static_link" if="static_link"/>
 <set name="STD_MODULE_LINK" value="exe" if="HXCPP_JS_PRIME"/>
 
+
+
 <set name="LIBEXTRA" value=".iphonesim-64" if="iphonesim"/>
 <set name="LIBEXTRA" value=".iphonesim" if="iphonesim" unless="HXCPP_M64"/>
 <section if="iphoneos">
