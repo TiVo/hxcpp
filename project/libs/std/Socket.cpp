@@ -1108,8 +1108,8 @@ static value socket_selector_initialize(value selector)
     fcntl(sv[0], F_SETFL, fcntl(sv[0], F_GETFD) | O_NONBLOCK);
     fcntl(sv[1], F_SETFL, fcntl(sv[1], F_GETFD) | O_NONBLOCK);
 
-    val_array_set_i(selector, 0, alloc_abstract(k_socket, (void *) sv[0]));
-    val_array_set_i(selector, 1, alloc_abstract(k_socket, (void *) sv[1]));
+    val_array_set_i(selector, 0, alloc_abstract(k_socket, (void *) (uintptr_t) sv[0]));
+    val_array_set_i(selector, 1, alloc_abstract(k_socket, (void *) (uintptr_t) sv[1]));
 
     return alloc_null();
 }
