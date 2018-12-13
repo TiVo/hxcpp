@@ -1103,7 +1103,10 @@ class BuildTool
                   target.mFlags.push( substitute(el.att.name) );
                   target.mFlags.push( substitute(el.att.value) );
                case "dir" : target.mDirs.push( substitute(el.att.name) );
-               case "outdir" : target.mOutputDir = substitute(el.att.name)+"/";
+               case "outdir" :
+                  target.mOutputDir = substitute(el.att.name)+"/";
+//                  Log.info("Element outdir in target " + inXML.att.id + " explict sets mOutputDir to: " + target.mOutputDir);
+
                case "ext" : target.setExt( (substitute(el.att.value)) );
                case "builddir" : target.mBuildDir = substitute(el.att.name);
                case "libpath" : target.mLibPaths.push( substitute(el.att.name) );
