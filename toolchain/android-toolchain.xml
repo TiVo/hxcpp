@@ -184,7 +184,7 @@
   <flag value="-stdlib=libc++" if="HXCPP_CLANG" />
   <flag value="-std=c++11" if="HXCPP_CPP11"/>
   <flag value="-Wl,-shared,-Bsymbolic"/>
-  <flag value="-Wl,--long-plt"/>
+  <!-- <flag value="-Wl,--long-plt"/> -->
   <section if="HXCPP_OPTIMIZE_FOR_SIZE || HXCPP_GC_SECTIONS" unless="debug">
     <flag value="-Wl,--gc-sections" />
   </section>

@@ -41,7 +41,6 @@
  <flag value='-DHXCPP_API_LEVEL=0' unless="hxcpp_api_level"  tag="haxe"/>
  <flag value='-DHXCPP_OBJC' if="objc"  tag="haxe"/>
  <flag value='-DHXCPP_GC_DEBUG_LEVEL=${HXCPP_GC_DEBUG_LEVEL}' if="HXCPP_GC_DEBUG_LEVEL" tag="gc" />
- <flag value='-DHXCPP_USE_STOCK_GC' if="HXCPP_USE_STOCK_GC" />
  <!-- set -D_TIVO_ for all TiVo builds, allows C++ code to include
       #ifdef _TIVO_ for TiVo-specific customizations -->
  <flag value="-D_TIVO_" if="tivo" />

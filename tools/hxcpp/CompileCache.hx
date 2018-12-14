@@ -172,7 +172,10 @@ class CompileCache
               {
                  try
                  {
-                    FileSystem.deleteDirectory(path);
+                     // Do not delete the directory, there are race conditions
+                     // with other threads using the cache and expecting this
+                     // directory to exist while it is being removed here
+                     //FileSystem.deleteDirectory(path);
                  }
                  catch(e:Dynamic)
                  {

@@ -74,7 +74,7 @@ enum NewObjectType
 class HXCPP_EXTERN_CLASS_ATTRIBUTES Object
 {
 public:
-#ifdef HXCPP_USE_STOCK_GC
+#ifdef HXCPP_USE_IMMIX_GC
    // These allocate the function using the garbage-colleced malloc
    inline void *operator new( size_t inSize, bool inContainer=true, const char *inName=0 )
    {

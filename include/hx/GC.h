@@ -182,7 +182,7 @@ void VisitClassStatics(hx::VisitContext *__inCtx);
 
 // Called by haxe/application code to mark allocations.
 //  "Object" allocs will recursively call __Mark
-#ifdef HXCPP_USE_STOCK_GC
+#ifdef HXCPP_USE_IMMIX_GC
 inline void MarkAlloc(void *inPtr ,hx::MarkContext *__inCtx);
 inline void MarkObjectAlloc(hx::Object *inPtr ,hx::MarkContext *__inCtx);
 #else
@@ -279,7 +279,7 @@ extern void BadImmixAlloc();
 
 HXCPP_EXTERN_CLASS_ATTRIBUTES extern unsigned int gPrevMarkIdMask;
 
-#ifdef HXCPP_USE_STOCK_GC
+#ifdef HXCPP_USE_IMMIX_GC
 
 // Called only once it is determined that a new mark is required
 HXCPP_EXTERN_CLASS_ATTRIBUTES void MarkAllocUnchecked(void *inPtr ,hx::MarkContext *__inCtx); 
@@ -298,7 +298,7 @@ inline void MarkObjectAlloc(hx::Object *inPtr ,hx::MarkContext *__inCtx)
       MarkObjectAllocUnchecked(inPtr,__inCtx);
 }
 
-#endif // HXCPP_USE_STOCK_GC
+#endif // HXCPP_USE_IMMIX_GC
 
 
 } // end namespace hx
@@ -362,7 +362,7 @@ inline void MarkObjectAlloc(hx::Object *inPtr ,hx::MarkContext *__inCtx)
 
 
 
-#ifdef HXCPP_USE_STOCK_GC
+#ifdef HXCPP_USE_IMMIX_GC
 #define HX_MARK_STRING(ioPtr) \
    if (ioPtr) hx::MarkAlloc((void *)ioPtr, __inCtx );
 #else
